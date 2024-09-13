@@ -1,5 +1,5 @@
 const Account = require('../models/Account');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 // Danh sách vai trò hợp lệ

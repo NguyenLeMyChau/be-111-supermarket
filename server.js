@@ -1,30 +1,33 @@
 const express = require('express');
-const cors = require('cors');
+const connectDB = require('./config/configMongoDB');
+const cors  =require('cors');
+require('dotenv').config(); // Đọc biến môi trường từ .env
+
 const app = express();
-const PORT = process.env.PORT || 4000;
-const cookieParser = require('cookie-parser');
-require("dotenv").config(); // Load các biến môi trường từ file .env
+const PORT = process.env.PORT || 5000;
 
-// npx nodemon server.js // Chạy server
+// Kết nối MongoDB
+connectDB();
 
-app.use(express.json()); // Sử dụng middleware để phân tích JSON gửi đến từ client
+// Middleware xử lý JSON
 app.use(cors()); // Sử dụng middleware để xử lý lỗi CORS
-app.use(cookieParser()); // Sử dụng middleware để phân tích cookie từ client
+app.use(express.json());
 
-// Định nghĩa một route cơ bản
-app.get('/', (req, res) => {
-    res.send('Hello World!');
+// Định tuyến
+app.use('/api/auth', require('./routes/authRoutes'));
+
+// Route yêu cầu quyền 'admin'
+app.get('/manager', require('./middlewares/authMiddleware')(['manager']), (req, res) => {
+  res.json({ message: 'Welcome admin!' });
 });
 
-// Khởi động server và lắng nghe trên port 4000
+// Route yêu cầu quyền 'admin' hoặc 'staff'
+app.get('/dashboard', require('./middlewares/authMiddleware')(['manager', 'staff']), (req, res) => {
+  res.json({ message: `Welcome ${req.account.role}!` });
+});
+
+// Sử dụng PORT từ .env
+
 app.listen(PORT, () => {
-    console.log(`Server đang chạy trên port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
-
-// Kết nối tới cơ sở dữ liệu
-require("./src/config/configMongoDB").connectDB(); // Kết nối với cơ sở dữ liệu MongoDB
-
-// Định tuyến cho các endpoints
-const authRoutes = require("./src/routes/authRoute"); // Import các routes cho music từ thư mục routes/music
-app.use("/", authRoutes); // Sử dụng routes cho user
-
