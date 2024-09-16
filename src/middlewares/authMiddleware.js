@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-require('dotenv').config(); // Đọc biến môi trường từ .env
 
 const authMiddleware = (roles = []) => {
   return (req, res, next) => {
@@ -9,12 +8,11 @@ const authMiddleware = (roles = []) => {
     }
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.account = decoded;
+      const account = jwt.verify(token, process.env.JWT_ACCESS_KEY);
 
       // Kiểm tra vai trò người dùng
-      if (roles.length && !roles.includes(req.account.role)) {
-        return res.status(403).json({ message: 'Access denied','role access':req.account.role });
+      if (roles.length && !roles.includes(account.role)) {
+        return res.status(403).json({ message: 'Access denied', 'role access': account.role });
       }
 
       next();

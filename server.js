@@ -1,33 +1,40 @@
 const express = require('express');
-const connectDB = require('./config/configMongoDB');
-const cors  =require('cors');
-require('dotenv').config(); // Đọc biến môi trường từ .env
-
-const app = express();
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const dotenv = require('dotenv');
 const PORT = process.env.PORT || 5000;
 
-// Kết nối MongoDB
+const connectDB = require('./src/config/configMongoDB');
+const authRoutes = require('./src/routes/authRoutes');
+const authMiddleware = require('./src/middlewares/authMiddleware');
+
+// Load environment variables from .env file into process.env 
+dotenv.config();
+const app = express();
+
+// Connect to MongoDB
 connectDB();
 
-// Middleware xử lý JSON
-app.use(cors()); // Sử dụng middleware để xử lý lỗi CORS
+// Middleware for parsing incoming request bodies 
+app.use(cors());
+app.use(cookieParser());
 app.use(express.json());
 
-// Định tuyến
-app.use('/api/auth', require('./routes/authRoutes'));
+// ROUTES
+app.use('/api/auth', authRoutes);
 
 // Route yêu cầu quyền 'admin'
-app.get('/manager', require('./middlewares/authMiddleware')(['manager']), (req, res) => {
+app.get('/manager', authMiddleware(['manager']), (req, res) => {
   res.json({ message: 'Welcome admin!' });
 });
 
 // Route yêu cầu quyền 'admin' hoặc 'staff'
-app.get('/dashboard', require('./middlewares/authMiddleware')(['manager', 'staff']), (req, res) => {
+app.get('/dashboard', authMiddleware(['manager', 'staff']), (req, res) => {
   res.json({ message: `Welcome ${req.account.role}!` });
 });
-
-// Sử dụng PORT từ .env
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+
