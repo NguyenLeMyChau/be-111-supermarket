@@ -81,13 +81,13 @@ async function registerAccount(accountData) {
 }
 
 // generate access token
-function generateAccessToken(account) {
-    return jwt.sign(account, process.env.JWT_ACCESS_KEY, { expiresIn: '30s' });
+function generateAccessToken(payload) {
+    return jwt.sign(payload, process.env.JWT_ACCESS_KEY, { expiresIn: '30s' });
 }
 
 // generate refresh token
-function generateRefreshToken(account) {
-    return jwt.sign(account, process.env.JWT_REFRESH_KEY);
+function generateRefreshToken(payload) {
+    return jwt.sign(payload, process.env.JWT_REFRESH_KEY);
 }
 
 // Đăng nhập tài khoản
@@ -110,10 +110,29 @@ async function loginAccount({ phone, password }) {
             throw new Error('Tài khoản đã bị vô hiệu hóa');
         }
 
+        let user;
+        if (account.role === 'customer') {
+            user = await Customer.findOne({ account_id: account._id });
+        } else {
+            user = await Employee.findOne({ account_id: account._id });
+        }
+
+        if (!user) {
+            throw new Error('Không tìm thấy thông tin người dùng');
+        }
+
+
         // Tạo JWT token với payload là id và vai trò của tài khoản
         const payload = {
             id: account._id,
             role: account.role,
+            user: {
+                name: user.name,
+                address: user.address,
+                phone: user.phone,
+                email: user.email,
+                gender: user.gender
+            }
         };
 
         // Ký JWT token với thời hạn 1 giờ

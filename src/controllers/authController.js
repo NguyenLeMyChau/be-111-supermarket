@@ -51,16 +51,23 @@ async function requestRefreshToken(req, res) {
         }
 
         // Giải mã refresh token để lấy thông tin account
-        const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY);
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY);
 
-        const account = {
-            id: payload.id,
-            role: payload.role,
+        const payload = {
+            id: decoded.id,
+            role: decoded.role,
+            user: {
+                name: decoded.user.name,
+                address: decoded.user.address,
+                phone: decoded.user.phone,
+                email: decoded.user.email,
+                gender: decoded.user.gender
+            }
         };
 
         // Tạo token mới
-        const newAccessToken = generateAccessToken(account);
-        const newRefreshToken = generateRefreshToken(account);
+        const newAccessToken = generateAccessToken(payload);
+        const newRefreshToken = generateRefreshToken(payload);
 
         // Xóa refresh token cũ khỏi danh sách refresh token 
         refreshTokens = refreshTokens.filter(token => token !== refreshToken);
