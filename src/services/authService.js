@@ -82,7 +82,7 @@ async function registerAccount(accountData) {
 
 // generate access token
 function generateAccessToken(payload) {
-    return jwt.sign(payload, process.env.JWT_ACCESS_KEY, { expiresIn: '1h' });
+    return jwt.sign(payload, process.env.JWT_ACCESS_KEY, { expiresIn: '30s' });
 }
 
 // generate refresh token
