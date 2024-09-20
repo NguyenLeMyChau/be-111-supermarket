@@ -5,8 +5,9 @@ const dotenv = require('dotenv');
 const PORT = process.env.PORT || 5000;
 
 const connectDB = require('./src/config/configMongoDB');
-const authRoutes = require('./src/routes/authRoutes');
 const authMiddleware = require('./src/middlewares/authMiddleware');
+const authRoutes = require('./src/routes/authRoutes');
+const supplierRoutes = require('./src/routes/supplierRoutes');
 
 // Load environment variables from .env file into process.env 
 dotenv.config();
@@ -25,6 +26,7 @@ app.use(express.json());
 
 // ROUTES
 app.use('/api/auth', authRoutes);
+app.use('/api/supplier', supplierRoutes);
 
 // Route yêu cầu quyền 'admin'
 app.get('/manager', authMiddleware(['manager']), (req, res) => {
