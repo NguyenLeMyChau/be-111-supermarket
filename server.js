@@ -26,7 +26,7 @@ app.use(express.json());
 
 // ROUTES
 app.use('/api/auth', authRoutes);
-app.use('/api/supplier', supplierRoutes);
+app.use('/api/supplier', authMiddleware(['manager']), supplierRoutes);
 
 // Route yêu cầu quyền 'admin'
 app.get('/manager', authMiddleware(['manager']), (req, res) => {
