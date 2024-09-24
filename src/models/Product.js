@@ -7,7 +7,11 @@ const productSchema = new mongoose.Schema({
     barcode: { type: String, required: true, trim: true },
     itemcode: { type: String, required: true, trim: true },
     supplier_id: { type: mongoose.Schema.Types.ObjectId, ref: 'supplier' },
-});
+    category_id: { type: mongoose.Schema.Types.ObjectId, ref: 'category' },
+    
+},{
+    timestamps: true, // Tự động thêm createdAt và updatedAt
+  });
 
 productSchema.plugin(AutoIncrement, { inc_field: 'product_index' });
 
