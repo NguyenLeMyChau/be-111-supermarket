@@ -9,6 +9,8 @@ const authMiddleware = require('./src/middlewares/authMiddleware');
 const authRoutes = require('./src/routes/authRoutes');
 const supplierRoutes = require('./src/routes/supplierRoutes');
 const productRoutes = require('./src/routes/productRoutes');
+const employeeRoutes = require('./src/routes/employeeRoutes');
+
 
 // Load environment variables from .env file into process.env 
 dotenv.config();
@@ -29,6 +31,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/supplier', authMiddleware(['manager']), supplierRoutes);
 app.use('/api/product', authMiddleware(['manager']), productRoutes);
+app.use('/api/employee', authMiddleware(['manager']), employeeRoutes);
 
 // Route yêu cầu quyền 'admin'
 app.get('/manager', authMiddleware(['manager']), (req, res) => {
