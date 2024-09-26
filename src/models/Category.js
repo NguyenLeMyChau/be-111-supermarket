@@ -17,8 +17,8 @@ const CategorySchema = new Schema({
 },{
   timestamps: true, // Tự động thêm createdAt và updatedAt
 });
-productSchema.plugin(AutoIncrement, { inc_field: 'category_index' });
+CategorySchema.plugin(AutoIncrement, { inc_field: 'category_index' });
 
-const Category = mongoose.model("category", CategorySchema);
+const Category = mongoose.model('category', CategorySchema, 'category');
 
 module.exports = Category;
