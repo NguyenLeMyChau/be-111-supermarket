@@ -16,13 +16,17 @@ async function registerAccount(accountData) {
     try {
         const { phone, password, role, name, address, email, gender } = accountData;
 
+        if (name === '' || phone === '' || password === '') {
+            throw new Error('Vui lòng điền đầy đủ thông tin');
+        }
+
         if (!VALID_ROLES.includes(role)) {
             throw new Error('Invalid role');
         }
 
         const existingAccount = await Account.findOne({ phone }).session(session);
         if (existingAccount) {
-            throw new Error('Account already exists');
+            throw new Error('Tài khoản đã tồn tại');
         }
 
         const salt = await bcrypt.genSalt(10);

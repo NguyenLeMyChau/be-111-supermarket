@@ -3,8 +3,11 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const authMiddleware = require('../middlewares/authMiddleware');
 
-// Đăng ký
-router.post('/register', authController.register);
+// Đăng ký nhân viên
+router.post('/register-employee', authMiddleware(['manager']), authController.register);
+
+// Đăng ký khách hàng
+router.post('/register-customer', authController.register);
 
 // Đăng nhập
 router.post('/login', authController.login);

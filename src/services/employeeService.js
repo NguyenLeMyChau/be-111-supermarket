@@ -7,7 +7,12 @@ async function getAllEmployee() {
 
         const employees = await Promise.all(accounts.map(async (account) => {
             const employee = await Employee.findOne({ account_id: account._id });
-            return employee ? employee.toObject() : null;
+            if (employee) {
+                const employeeObj = employee.toObject();
+                employeeObj.active = account.active;
+                return employeeObj;
+            }
+            return null;
         }));
 
         return employees.filter(employee => employee !== null);

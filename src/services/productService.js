@@ -15,10 +15,20 @@ async function getAllCategory() {
 
         return categoriesWithProducts;
     } catch (err) {
-        throw new Error(`Error getting all account: ${err.message}`);
+        throw new Error(`Error getting all categories: ${err.message}`);
+    }
+}
+
+async function getAllProduct() {
+    try {
+        const products = await Product.find();
+        return products;
+    } catch (err) {
+        throw new Error(`Error getting all products: ${err.message}`);
     }
 }
 
 module.exports = {
     getAllCategory,
+    getAllProduct
 };
