@@ -35,10 +35,10 @@ const PromotionLineSchema = new Schema({
   }, {
     timestamps: true,
   });
-  productSchema.plugin(AutoIncrement, { inc_field: 'promotionLine_index' });
+  PromotionLineSchema.plugin(AutoIncrement, { inc_field: 'promotionLine_index' });
   
   // Tạo model từ schema
-  const PromotionLine = mongoose.model('promotion_line', PromotionLineSchema);
+  const PromotionLine = mongoose.model('promotion_line', PromotionLineSchema, 'promotion_line');
   
   module.exports = PromotionLine;
   

@@ -48,9 +48,9 @@ async function requestRefreshToken(req, res) {
             return res.status(403).json({ message: 'No refresh token provided' });
         }
 
-        if (!refreshTokens.includes(refreshToken)) {
-            return res.status(403).json({ message: 'Invalid refresh token' });
-        }
+        // if (!refreshTokens.includes(refreshToken)) {
+        //     return res.status(403).json({ message: 'Invalid refresh token' });
+        // }
 
         // Giải mã refresh token để lấy thông tin account
         const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY);

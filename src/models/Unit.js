@@ -17,8 +17,8 @@ const UnitSchema = new Schema({
   timestamps: true, // Tự động thêm createdAt và updatedAt
 });
 
-supplierSchema.plugin(AutoIncrement, { inc_field: 'unit_index' });
+UnitSchema.plugin(AutoIncrement, { inc_field: 'unit_index' });
 
-const Unit = mongoose.model('unit', UnitSchema);
+const Unit = mongoose.model('unit', UnitSchema, 'unit');
 
 module.exports = Unit;

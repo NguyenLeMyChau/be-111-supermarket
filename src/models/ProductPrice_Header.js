@@ -30,9 +30,9 @@ const productPriceHeaderSchema = new mongoose.Schema({
 },{
     timestamps: true, // Tự động thêm createdAt và updatedAt
   });
-  productSchema.plugin(AutoIncrement, { inc_field: 'productPriceHeader_index' });
+  productPriceHeaderSchema.plugin(AutoIncrement, { inc_field: 'productPriceHeader_index' });
 
 
-const ProductPriceHeader = mongoose.model('productPrice_header', productPriceHeaderSchema);
+const ProductPriceHeader = mongoose.model('productPrice_header', productPriceHeaderSchema, 'productPrice_header');
 
 module.exports = ProductPriceHeader;

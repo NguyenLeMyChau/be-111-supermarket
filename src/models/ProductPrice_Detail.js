@@ -24,14 +24,14 @@ const productPriceDetailSchema = new mongoose.Schema({
   price: {
     type: Number,
     required: true
-},
-},{
-    timestamps: true, // Tự động thêm createdAt và updatedAt
-  });
-  productSchema.plugin(AutoIncrement, { inc_field: 'productPriceDetail_index' });
+  },
+}, {
+  timestamps: true, // Tự động thêm createdAt và updatedAt
+});
+productPriceDetailSchema.plugin(AutoIncrement, { inc_field: 'productPriceDetail_index' });
 
 
 
-const ProductPriceDetail = mongoose.model('productPrice_detail', productPriceDetailSchema);
+const ProductPriceDetail = mongoose.model('productPrice_detail', productPriceDetailSchema, 'productPrice_detail');
 
 module.exports = ProductPriceDetail;

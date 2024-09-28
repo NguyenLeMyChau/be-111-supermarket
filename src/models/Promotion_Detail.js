@@ -54,10 +54,10 @@ const PromotionDetailSchema = new Schema({
   timestamps: true,
 });
 
-productSchema.plugin(AutoIncrement, { inc_field: 'productPriceDetail_index' });
+PromotionDetailSchema.plugin(AutoIncrement, { inc_field: 'productPriceDetail_index' });
 
 
 // Tạo model từ schema
-const PromotionDetail = mongoose.model('promotion_detail', PromotionDetailSchema);
+const PromotionDetail = mongoose.model('promotion_detail', PromotionDetailSchema, 'promotion_detail');
 
 module.exports = PromotionDetail;

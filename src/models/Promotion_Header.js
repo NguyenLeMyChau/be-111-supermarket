@@ -23,10 +23,10 @@ const PromotionHeaderSchema = new Schema({
   timestamps: true, // Tự động thêm createdAt và updatedAt
 });
 
-productSchema.plugin(AutoIncrement, { inc_field: 'promotion_header_index' });
+PromotionHeaderSchema.plugin(AutoIncrement, { inc_field: 'promotion_header_index' });
 
 
 // Tạo model từ schema
-const PromotionHeader = mongoose.model('promotion_header', PromotionHeaderSchema);
+const PromotionHeader = mongoose.model('promotion_header', PromotionHeaderSchema, 'promotion_header');
 
 module.exports = PromotionHeader;
