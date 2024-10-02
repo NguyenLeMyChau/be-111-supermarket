@@ -28,7 +28,17 @@ async function getAllProduct() {
     }
 }
 
+async function getProductsBySupplierId(supplierId) {
+    try {
+        const products = await Product.find({ supplier_id: supplierId });
+        return products;
+    } catch (err) {
+        throw new Error(`Error getting products by supplier id: ${err.message}`);
+    }
+}
+
 module.exports = {
     getAllCategory,
-    getAllProduct
+    getAllProduct,
+    getProductsBySupplierId
 };

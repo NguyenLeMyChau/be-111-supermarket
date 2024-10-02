@@ -19,6 +19,7 @@ async function getAllSupplier() {
     }
 }
 
+
 module.exports = {
-    getAllSupplier,
+    getAllSupplier
 };
