@@ -45,14 +45,12 @@ async function getProductsByWarehouse(warehouseId) {
             return {
                 ...warehouseObj,
                 product_name: product ? product.name : null,
-                supplier_id: supplier._id,
-                supplier_name: supplier.name,
-                supplier_email: supplier.email,
                 status: warehouseObj.stock_quantity > warehouseObj.min_stock_threshold
             };
         }));
 
-        return warehousesWithProductNames;
+        return { warehousesWithProductNames, supplier };
+
     } catch (err) {
         throw new Error(`Error getting products by warehouse: ${err.message}`);
     }
@@ -92,7 +90,6 @@ const orderProductFromSupplier = async (supplierId, accountId, productList) => {
 
         const supplier = await Supplier.findById(supplierId).select('email name');
         const employee = await Employee.findOne({ account_id: accountId }).select('name phone email');
-
 
         // Lấy tên sản phẩm từ productList
         const productsWithNames = await Promise.all(productList.map(async (product) => {
@@ -195,11 +192,35 @@ const updateOrderStatus = async (orderId, newStatusInVietnamese) => {
     }
 };
 
+const getWarehousesFromSupplierId = async (supplierId) => {
+    try {
+        const products = await Product.find({ supplier_id: supplierId }).select('_id');
+        const warehouses = await Warehouse.find({ product_id: { $in: products.map(product => product._id) } });
+        // Thêm thuộc tính status và tên sản phẩm vào từng đối tượng kho hàng
+        const warehousesWithDetails = await Promise.all(warehouses.map(async (warehouse) => {
+            const warehouseObj = warehouse.toObject();
+            const product = await Product.findById(warehouse.product_id).select('name').lean();
+            return {
+                ...warehouseObj,
+                status: warehouseObj.stock_quantity > warehouseObj.min_stock_threshold,
+                product_name: product ? product.name : null
+            };
+        }));
+
+        return warehousesWithDetails;
+    }
+    catch (error) {
+        throw new Error(`Error getting warehouses from supplier id: ${error.message}`);
+    }
+}
+
+
 
 module.exports = {
     getAllWarehouse,
     getProductsByWarehouse,
     getAllOrders,
     orderProductFromSupplier,
-    updateOrderStatus
+    updateOrderStatus,
+    getWarehousesFromSupplierId
 };

@@ -8,5 +8,6 @@ router.get('/get-products-by-warehouse/:warehouseId', warehouseController.getPro
 router.get('/get-all-orders', warehouseController.getAllOrdersController);
 router.post('/order-product-from-supplier', warehouseController.orderProductFromSupplierController);
 router.put('/update-order-status', warehouseController.updateOrderStatusController);
+router.get('/get-warehouse-by-supplier', warehouseController.getWarehousesFromSupplierIdController);
 
 module.exports = router;
