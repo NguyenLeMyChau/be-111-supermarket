@@ -6,7 +6,7 @@ const Product = require('../models/Product');
 const Supplier = require('../models/Supplier');
 const SupplierOrderHeader = require('../models/SupplierOrder_Header');
 const SupplierOrderDetail = require('../models/SupplierOrder_Detail');
-const { mapVietnameseStatusToValidStatus, validStatuses } = require('../utils/MappingStatus');
+const { mapVietnameseStatusToValidStatus, validStatuses, mapValidStatusToVietnamese } = require('../utils/MappingStatus');
 const { sendOrderEmail } = require('./emailService');
 
 async function getAllWarehouse() {
@@ -58,6 +58,30 @@ async function getProductsByWarehouse(warehouseId) {
     }
 }
 
+const getAllOrders = async () => {
+    try {
+        const orders = await SupplierOrderHeader.find().populate('supplier_id', 'name').lean();
+
+        // Lấy thông tin nhân viên và chuyển đổi trạng thái của từng đơn hàng
+        const ordersWithDetails = await Promise.all(orders.map(async (order) => {
+            const employee = await Employee.findOne({ account_id: order.account_id }).select('name phone email');
+            return {
+                ...order,
+                status: mapValidStatusToVietnamese(order.status),
+                employee: employee ? {
+                    name: employee.name,
+                    phone: employee.phone,
+                    email: employee.email
+                } : null
+            };
+        }));
+
+        return ordersWithDetails;
+    } catch (error) {
+        throw new Error(`Error getting all orders: ${error.message}`);
+    }
+};
+
 
 const orderProductFromSupplier = async (supplierId, accountId, productList) => {
     const session = await mongoose.startSession();
@@ -67,7 +91,7 @@ const orderProductFromSupplier = async (supplierId, accountId, productList) => {
         session.startTransaction();
 
         const supplier = await Supplier.findById(supplierId).select('email name');
-        const employee = await Employee.findOne({ account_id: accountId }).select('name phone email'); console.log('Employee:', employee);
+        const employee = await Employee.findOne({ account_id: accountId }).select('name phone email');
 
 
         // Lấy tên sản phẩm từ productList
@@ -175,6 +199,7 @@ const updateOrderStatus = async (orderId, newStatusInVietnamese) => {
 module.exports = {
     getAllWarehouse,
     getProductsByWarehouse,
+    getAllOrders,
     orderProductFromSupplier,
     updateOrderStatus
 };

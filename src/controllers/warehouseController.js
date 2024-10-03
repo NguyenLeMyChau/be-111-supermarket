@@ -1,4 +1,4 @@
-const { getAllWarehouse, getProductsByWarehouse, orderProductFromSupplier, updateOrderStatus } = require("../services/warehouseService");
+const { getAllWarehouse, getProductsByWarehouse, orderProductFromSupplier, updateOrderStatus, getAllOrders } = require("../services/warehouseService");
 
 
 async function getWarehouses(req, res) {
@@ -19,6 +19,15 @@ async function getProductByWarehouse(req, res) {
     } catch (error) {
         console.error(`Error get products by warehouse: ${error.message}`);
         res.status(400).json({ message: error.message });
+    }
+}
+
+async function getAllOrdersController(req, res) {
+    try {
+        const orders = await getAllOrders();
+        return res.status(200).json(orders);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
     }
 }
 
@@ -62,6 +71,7 @@ const updateOrderStatusController = async (req, res) => {
 module.exports = {
     getWarehouses,
     getProductByWarehouse,
+    getAllOrdersController,
     orderProductFromSupplierController,
     updateOrderStatusController
 };
