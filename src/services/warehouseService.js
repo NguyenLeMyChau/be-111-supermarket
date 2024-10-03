@@ -1,10 +1,13 @@
 const mongoose = require('mongoose');
+const Account = require('../models/Account');
+const Employee = require('../models/Employee');
 const Warehouse = require('../models/Warehouse');
 const Product = require('../models/Product');
 const Supplier = require('../models/Supplier');
 const SupplierOrderHeader = require('../models/SupplierOrder_Header');
 const SupplierOrderDetail = require('../models/SupplierOrder_Detail');
 const { mapVietnameseStatusToValidStatus, validStatuses } = require('../utils/MappingStatus');
+const { sendOrderEmail } = require('./emailService');
 
 async function getAllWarehouse() {
     try {
@@ -44,6 +47,7 @@ async function getProductsByWarehouse(warehouseId) {
                 product_name: product ? product.name : null,
                 supplier_id: supplier._id,
                 supplier_name: supplier.name,
+                supplier_email: supplier.email,
                 status: warehouseObj.stock_quantity > warehouseObj.min_stock_threshold
             };
         }));
@@ -56,57 +60,77 @@ async function getProductsByWarehouse(warehouseId) {
 
 
 const orderProductFromSupplier = async (supplierId, accountId, productList) => {
-    // Bắt đầu một session
     const session = await mongoose.startSession();
+    let transactionCommitted = false;
 
     try {
-        // Bắt đầu transaction
         session.startTransaction();
 
-        // 1. Tạo một bản ghi mới cho SupplierOrderHeader trong session
+        const supplier = await Supplier.findById(supplierId).select('email name');
+        const employee = await Employee.findOne({ account_id: accountId }).select('name phone email'); console.log('Employee:', employee);
+
+
+        // Lấy tên sản phẩm từ productList
+        const productsWithNames = await Promise.all(productList.map(async (product) => {
+            const productInfo = await Product.findById(product.product_id).select('name');
+            return {
+                ...product,
+                name: productInfo ? productInfo.name : 'Unknown'
+            };
+        }));
+
         const supplierOrderHeader = new SupplierOrderHeader({
             supplier_id: supplierId,
             account_id: accountId,
             status: 'PENDING'
         });
 
-        // Lưu SupplierOrderHeader vào database trong session
         const savedOrderHeader = await supplierOrderHeader.save({ session });
 
-        // 2. Tính toán tổng tiền của đơn hàng từ danh sách sản phẩm
         const totalAmount = productList.reduce((sum, product) => {
             return sum + product.quantity * product.price_order;
         }, 0);
 
-        // 3. Tạo bản ghi SupplierOrderDetail tương ứng với header trong session
         const supplierOrderDetail = new SupplierOrderDetail({
-            supplierOrderHeader_id: savedOrderHeader._id, // Liên kết đến SupplierOrderHeader
+            supplierOrderHeader_id: savedOrderHeader._id,
             products: productList.map(product => ({
                 product_id: product.product_id,
                 quantity: product.quantity,
                 price_order: product.price_order
             })),
-            total: totalAmount // Tổng tiền cho tất cả sản phẩm
+            total: totalAmount
         });
 
-        // Lưu SupplierOrderDetail vào database trong session
         const savedOrderDetail = await supplierOrderDetail.save({ session });
 
-        // 4. Commit transaction nếu không có lỗi
         await session.commitTransaction();
+        transactionCommitted = true;
 
         console.log('Order placed successfully!');
+
+        const orderInfo = {
+            supplierName: supplier.name,
+            orderId: savedOrderHeader._id,
+            products: productsWithNames,
+            total: totalAmount,
+            senderName: employee.name,
+            senderPhone: employee.phone,
+            senderEmail: employee.email,
+        };
+
+        await sendOrderEmail(orderInfo);
+
         return {
             orderHeader: savedOrderHeader,
             orderDetail: savedOrderDetail
         };
     } catch (error) {
-        // Nếu có lỗi, rollback lại toàn bộ transaction
-        await session.abortTransaction();
+        if (!transactionCommitted) {
+            await session.abortTransaction();
+        }
         console.error('Error placing order, transaction rolled back:', error);
         throw error;
     } finally {
-        // Kết thúc session
         session.endSession();
     }
 };
