@@ -59,8 +59,8 @@ async function orderProductFromSupplierController(req, res) {
 
 const updateOrderStatusController = async (req, res) => {
     try {
-        const { orderId, newStatusInVietnamese } = req.body;
-        const result = await updateOrderStatus(orderId, newStatusInVietnamese);
+        const { orderId, newStatus, products } = req.body;
+        const result = await updateOrderStatus(orderId, newStatus, products);
         return res.status(200).json(result);
     } catch (error) {
         return res.status(500).json({ message: error.message });

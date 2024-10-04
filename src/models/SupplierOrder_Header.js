@@ -6,7 +6,7 @@ const supplierOrderHeaderSchema = new mongoose.Schema({
     account_id: { type: mongoose.Schema.Types.ObjectId, ref: 'account' },
     status: {
         type: String,
-        enum: ['PENDING', 'APPROVED', 'REJECTED', 'SHIPPED', 'DELIVERED', 'CANCELLED'],
+        enum: ['Đang chờ xử lý', 'Đã duyệt', 'Bị từ chối', 'Đang giao hàng', 'Đã giao hàng', 'Đã hủy'],
         default: 'PENDING'
     }
 }, { timestamps: true });

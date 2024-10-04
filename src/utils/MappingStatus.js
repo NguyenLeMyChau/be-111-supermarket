@@ -1,6 +1,6 @@
 
 // Danh sách trạng thái hợp lệ
-const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+const validStatuses = ['Đang chờ xử lý', 'Đã duyệt', 'Bị từ chối', 'Đang giao hàng', 'Đã giao hàng', 'Đã hủy'];
 
 // Bộ chuyển đổi từ tiếng Việt sang trạng thái hợp lệ
 const vietnameseToStatus = {
