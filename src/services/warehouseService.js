@@ -9,6 +9,7 @@ const TransactionInventory = require('../models/TransactionInventory');
 
 const { validStatuses } = require('../utils/MappingStatus');
 const { sendOrderEmail } = require('./emailService');
+const buffer = 10; // Khoảng để xác định trạng thái "Gần ngưỡng"
 
 async function getAllWarehouse() {
     try {
@@ -16,11 +17,19 @@ async function getAllWarehouse() {
 
         const warehousesWithProductNames = warehouses.map(warehouse => {
             const warehouseObj = warehouse.toObject();
+            let status;
+            if (warehouseObj.stock_quantity < warehouseObj.min_stock_threshold) {
+                status = 'Hết hàng';
+            } else if (warehouseObj.stock_quantity <= warehouseObj.min_stock_threshold + buffer) {
+                status = 'Ít hàng';
+            } else {
+                status = 'Còn hàng';
+            }
             return {
                 ...warehouseObj,
                 product_name: warehouseObj.product_id ? warehouseObj.product_id.name : null,
                 product_id: undefined,
-                status: warehouseObj.stock_quantity > warehouseObj.min_stock_threshold
+                status: status
             };
         });
 
@@ -42,11 +51,18 @@ async function getProductsByWarehouse(warehouseId) {
         const warehousesWithProductNames = await Promise.all(warehouses.map(async warehouse => {
             const warehouseObj = warehouse.toObject();
             const product = await Product.findById(warehouse.product_id).select('name').lean();
-
+            let status;
+            if (warehouseObj.stock_quantity < warehouseObj.min_stock_threshold) {
+                status = 'Hết hàng';
+            } else if (warehouseObj.stock_quantity <= warehouseObj.min_stock_threshold + buffer) {
+                status = 'Ít hàng';
+            } else {
+                status = 'Còn hàng';
+            }
             return {
                 ...warehouseObj,
                 product_name: product ? product.name : null,
-                status: warehouseObj.stock_quantity > warehouseObj.min_stock_threshold
+                status: status
             };
         }));
 
@@ -227,9 +243,17 @@ const getWarehousesFromSupplierId = async (supplierId) => {
         const warehousesWithDetails = await Promise.all(warehouses.map(async (warehouse) => {
             const warehouseObj = warehouse.toObject();
             const product = await Product.findById(warehouse.product_id).select('name').lean();
+            let status;
+            if (warehouseObj.stock_quantity < warehouseObj.min_stock_threshold) {
+                status = 'Hết hàng';
+            } else if (warehouseObj.stock_quantity <= warehouseObj.min_stock_threshold + buffer) {
+                status = 'Ít hàng';
+            } else {
+                status = 'Còn hàng';
+            }
             return {
                 ...warehouseObj,
-                status: warehouseObj.stock_quantity > warehouseObj.min_stock_threshold,
+                status: status,
                 product_name: product ? product.name : null
             };
         }));
