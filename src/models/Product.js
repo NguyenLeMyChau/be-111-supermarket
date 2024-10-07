@@ -8,6 +8,7 @@ const productSchema = new mongoose.Schema({
     itemcode: { type: String, required: true, trim: true },
     supplier_id: { type: mongoose.Schema.Types.ObjectId, ref: 'supplier' },
     category_id: { type: mongoose.Schema.Types.ObjectId, ref: 'category' },
+    unit_id: { type: mongoose.Schema.Types.ObjectId, ref: 'unit' },
     
 },{
     timestamps: true, // Tự động thêm createdAt và updatedAt

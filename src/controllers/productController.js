@@ -1,4 +1,4 @@
-const { getAllCategory, getAllProduct, getProductsBySupplierId } = require("../services/productService");
+const { getAllCategory, getAllProduct, getProductsBySupplierId, getProductsDetail } = require("../services/productService");
 
 
 async function getCategories(req, res) {
@@ -31,8 +31,20 @@ async function findProductBySupplierId(req, res) {
         res.status(400).json({ message: error.message });
     }
 }
+
+async function getProductsDetailController(req, res) {
+    try {
+        const productId = req.params.productId;
+        const product = await getProductsDetail(productId);
+        res.status(200).json(product);
+    } catch (error) {
+        console.error(`Error get product detail: ${error.message}`);
+        res.status(400).json({ message: error.message });
+    }
+}
 module.exports = {
     getCategories,
     getProducts,
-    findProductBySupplierId
+    findProductBySupplierId,
+    getProductsDetailController,
 };
