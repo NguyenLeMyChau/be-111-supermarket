@@ -42,7 +42,48 @@ async function getAllPromotion() {
         throw new Error(`Error getting all promotions: ${err.message}`);
     }
 }
+const addPromotionHeader = async (promotionData) => {
+    try {
+        const newPromotion = new PromotionHeader(promotionData);
+        return await newPromotion.save();
+    } catch (error) {
+        throw new Error('Error saving promotion header: ' + error.message);
+    }
+};;
+const getAllPromotionLines = async () => {
+    try {
+        return await PromotionLine.find({});
+    } catch (error) {
+        throw new Error('Error fetching promotion lines: ' + error.message);
+    }
+};
+
+const addPromotionLine = async (promotionLineData) => {
+    const promotionHeader = await PromotionHeader.findById(promotionLineData.promotionHeader_id);
+    if (!promotionHeader) {
+        throw new Error('Promotion Header không tồn tại.');
+    }
+
+    const promotionLine = new PromotionLine(promotionLineData);
+    return await promotionLine.save();
+};
+
+const addPromotionDetail = async (promotionDetailData) => {
+  
+    const promotionLine = await PromotionLine.findById(promotionDetailData.promotionLine_id);
+    if (!promotionLine) {
+        throw new Error('Promotion Line không tồn tại.');
+    }
+
+    const promotionDetail = new PromotionDetail(promotionDetailData);
+    return await promotionDetail.save();
+};
+
 
 module.exports = {
     getAllPromotion,
+    addPromotionHeader,
+    getAllPromotionLines,
+    addPromotionDetail,
+    addPromotionLine,
 };

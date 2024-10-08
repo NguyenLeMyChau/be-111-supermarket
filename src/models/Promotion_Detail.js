@@ -16,24 +16,17 @@ const PromotionDetailSchema = new Schema({
   product_id: {
     type: Schema.Types.ObjectId,
     ref: 'product', // Khóa ngoại liên kết với Product
-    required: true,
   },
   unit_id: {
     type: Schema.Types.ObjectId,
     ref: 'unit', // Khóa ngoại liên kết với Unit
-    required: true,
   },
   quantity: {
     type: Number,
-    required: true,
   },
   product_donate: {
     type: Schema.Types.ObjectId,
     ref: 'product', // Sản phẩm tặng kèm
-  },
-  unit_donate: {
-    type: Schema.Types.ObjectId,
-    ref: 'unit', // Đơn vị tặng kèm
   },
   quantity_donate: {
     type: Number,

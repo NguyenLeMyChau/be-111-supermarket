@@ -30,7 +30,7 @@ const PromotionLineSchema = new Schema({
     type: {
       type: String,
       required: true,
-      enum: ['percentage', 'amount', 'quantity'], // Loại khuyến mãi
+      enum: ['percentage', 'amount', 'product'], // Loại khuyến mãi
     },
   }, {
     timestamps: true,

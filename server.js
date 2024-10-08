@@ -36,6 +36,7 @@ app.use('/api/product', authMiddleware(['manager']), productRoutes);
 app.use('/api/employee', authMiddleware(['manager']), employeeRoutes);
 app.use('/api/promotion', authMiddleware(['manager']), promotionRoutes);
 app.use('/api/warehouse', authMiddleware(['manager']), warehouseRoutes);
+app.use('/api/unit', warehouseRoutes);
 
 // Route yêu cầu quyền 'admin'
 app.get('/manager', authMiddleware(['manager']), (req, res) => {

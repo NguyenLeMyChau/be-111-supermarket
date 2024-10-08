@@ -23,7 +23,7 @@ const PromotionHeaderSchema = new Schema({
   timestamps: true, // Tự động thêm createdAt và updatedAt
 });
 
-PromotionHeaderSchema.plugin(AutoIncrement, { inc_field: 'promotion_header_index' });
+PromotionHeaderSchema.plugin(AutoIncrement, { inc_field: 'promotionHeader_index' });
 
 
 // Tạo model từ schema
