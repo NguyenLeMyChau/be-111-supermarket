@@ -1,13 +1,15 @@
 const mongoose = require('mongoose');
-const Account = require('../models/Account');
 const Employee = require('../models/Employee');
 const Warehouse = require('../models/Warehouse');
 const Product = require('../models/Product');
 const Supplier = require('../models/Supplier');
 const SupplierOrderHeader = require('../models/SupplierOrder_Header');
 const SupplierOrderDetail = require('../models/SupplierOrder_Detail');
-const { mapVietnameseStatusToValidStatus, validStatuses, mapValidStatusToVietnamese } = require('../utils/MappingStatus');
+const TransactionInventory = require('../models/TransactionInventory');
+
+const { validStatuses } = require('../utils/MappingStatus');
 const { sendOrderEmail } = require('./emailService');
+const buffer = 10; // Khoảng để xác định trạng thái "Gần ngưỡng"
 
 async function getAllWarehouse() {
     try {
@@ -15,11 +17,19 @@ async function getAllWarehouse() {
 
         const warehousesWithProductNames = warehouses.map(warehouse => {
             const warehouseObj = warehouse.toObject();
+            let status;
+            if (warehouseObj.stock_quantity < warehouseObj.min_stock_threshold) {
+                status = 'Hết hàng';
+            } else if (warehouseObj.stock_quantity <= warehouseObj.min_stock_threshold + buffer) {
+                status = 'Ít hàng';
+            } else {
+                status = 'Còn hàng';
+            }
             return {
                 ...warehouseObj,
                 product_name: warehouseObj.product_id ? warehouseObj.product_id.name : null,
                 product_id: undefined,
-                status: warehouseObj.stock_quantity > warehouseObj.min_stock_threshold
+                status: status
             };
         });
 
@@ -41,11 +51,18 @@ async function getProductsByWarehouse(warehouseId) {
         const warehousesWithProductNames = await Promise.all(warehouses.map(async warehouse => {
             const warehouseObj = warehouse.toObject();
             const product = await Product.findById(warehouse.product_id).select('name').lean();
-
+            let status;
+            if (warehouseObj.stock_quantity < warehouseObj.min_stock_threshold) {
+                status = 'Hết hàng';
+            } else if (warehouseObj.stock_quantity <= warehouseObj.min_stock_threshold + buffer) {
+                status = 'Ít hàng';
+            } else {
+                status = 'Còn hàng';
+            }
             return {
                 ...warehouseObj,
                 product_name: product ? product.name : null,
-                status: warehouseObj.stock_quantity > warehouseObj.min_stock_threshold
+                status: status
             };
         }));
 
@@ -63,14 +80,29 @@ const getAllOrders = async () => {
         // Lấy thông tin nhân viên và chuyển đổi trạng thái của từng đơn hàng
         const ordersWithDetails = await Promise.all(orders.map(async (order) => {
             const employee = await Employee.findOne({ account_id: order.account_id }).select('name phone email');
+            const orderDetails = await SupplierOrderDetail.find({ supplierOrderHeader_id: order._id }).lean();
+
+            // Lấy tên sản phẩm dựa vào product_id
+            const productsWithNames = await Promise.all(orderDetails.flatMap(detail => detail.products.map(async (product) => {
+                const productInfo = await Product.findById(product.product_id).select('name').lean();
+                return {
+                    product_id: product.product_id,
+                    name: productInfo ? productInfo.name : null,
+                    quantity: product.quantity,
+                    price: product.price_order
+                };
+            })));
+
             return {
                 ...order,
-                status: mapValidStatusToVietnamese(order.status),
+                status: order.status,
                 employee: employee ? {
                     name: employee.name,
                     phone: employee.phone,
                     email: employee.email
-                } : null
+                } : null,
+                total: orderDetails.reduce((sum, detail) => sum + detail.total, 0),
+                products: productsWithNames
             };
         }));
 
@@ -103,7 +135,7 @@ const orderProductFromSupplier = async (supplierId, accountId, productList) => {
         const supplierOrderHeader = new SupplierOrderHeader({
             supplier_id: supplierId,
             account_id: accountId,
-            status: 'PENDING'
+            status: 'Đang chờ xử lý'
         });
 
         const savedOrderHeader = await supplierOrderHeader.save({ session });
@@ -157,11 +189,8 @@ const orderProductFromSupplier = async (supplierId, accountId, productList) => {
 };
 
 
-const updateOrderStatus = async (orderId, newStatusInVietnamese) => {
+const updateOrderStatus = async (orderId, newStatus, products) => {
     try {
-        // Chuyển đổi trạng thái tiếng Việt sang trạng thái hợp lệ
-        const newStatus = mapVietnameseStatusToValidStatus(newStatusInVietnamese);
-
         // Kiểm tra trạng thái mới có hợp lệ không
         if (!validStatuses.includes(newStatus)) {
             throw new Error('Trạng thái không hợp lệ');
@@ -177,6 +206,20 @@ const updateOrderStatus = async (orderId, newStatusInVietnamese) => {
         // Cập nhật trạng thái mới
         order.status = newStatus;
         await order.save();
+
+        // Nếu trạng thái mới là "Đã giao hàng", tạo giao dịch kho hàng
+        if (newStatus === 'Đã giao hàng') {
+            const inventoryTransactions = products.map(product => ({
+                product_id: product.product_id,
+                quantity: product.quantity,
+                type: 'Nhập hàng',
+                order_id: orderId,
+                status: false
+            }));
+
+            // Lưu các giao dịch kho hàng vào cơ sở dữ liệu
+            await TransactionInventory.insertMany(inventoryTransactions);
+        }
 
         // Trả về đối tượng đơn hàng đã cập nhật
         return {
@@ -200,9 +243,17 @@ const getWarehousesFromSupplierId = async (supplierId) => {
         const warehousesWithDetails = await Promise.all(warehouses.map(async (warehouse) => {
             const warehouseObj = warehouse.toObject();
             const product = await Product.findById(warehouse.product_id).select('name').lean();
+            let status;
+            if (warehouseObj.stock_quantity < warehouseObj.min_stock_threshold) {
+                status = 'Hết hàng';
+            } else if (warehouseObj.stock_quantity <= warehouseObj.min_stock_threshold + buffer) {
+                status = 'Ít hàng';
+            } else {
+                status = 'Còn hàng';
+            }
             return {
                 ...warehouseObj,
-                status: warehouseObj.stock_quantity > warehouseObj.min_stock_threshold,
+                status: status,
                 product_name: product ? product.name : null
             };
         }));

@@ -8,4 +8,6 @@ router.get('/get-products', productController.getProducts);
 
 router.get('/get-products-by-supplier/:supplierId', productController.findProductBySupplierId);
 
+router.get('/get-product-detail/:productId', productController.getProductsDetailController);
+
 module.exports = router;

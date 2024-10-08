@@ -1,5 +1,6 @@
 const Category = require('../models/Category');
 const Product = require('../models/Product');
+const TransactionInventory = require('../models/TransactionInventory');
 
 async function getAllCategory() {
     try {
@@ -37,8 +38,33 @@ async function getProductsBySupplierId(supplierId) {
     }
 }
 
+async function getProductsDetail(productId) {
+    try {
+        const product = await Product.findById(productId)
+            .populate('unit_id', 'name')
+            .populate('supplier_id', 'name phone email')
+            .populate('category_id', 'name');
+
+        if (!product) {
+            throw new Error('Product not found');
+        }
+
+        // Tìm các giao dịch kho hàng có product_id tương ứng
+        const transactions = await TransactionInventory.find({ product_id: productId });
+
+        // Trả về đối tượng sản phẩm cùng với các giao dịch kho hàng
+        return {
+            ...product.toObject(),
+            transactions: transactions
+        };
+    } catch (err) {
+        throw new Error(`Error getting product detail: ${err.message}`);
+    }
+}
+
 module.exports = {
     getAllCategory,
     getAllProduct,
-    getProductsBySupplierId
+    getProductsBySupplierId,
+    getProductsDetail,
 };
