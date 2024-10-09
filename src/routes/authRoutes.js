@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const productController = require('../controllers/productController');
 const authMiddleware = require('../middlewares/authMiddleware');
 
 // Đăng ký nhân viên
@@ -20,5 +21,8 @@ router.post('/refresh', authController.requestRefreshToken);
 
 // Lấy toàn bộ danh sách account
 router.get('/accounts', authMiddleware(['manager']), authController.getAccounts);
+
+// Lấy thông tin hàng hoá cho customer
+router.get('/get-categories', productController.getCategories);
 
 module.exports = router;

@@ -42,6 +42,7 @@ app.use('/api/unit', warehouseRoutes);
 // ROUTES Customer
 app.use('/api/customer', authMiddleware(['customer']), customerRoutes);
 
+
 // Route yêu cầu quyền 'admin'
 app.get('/manager', authMiddleware(['manager']), (req, res) => {
   res.json({ message: 'Welcome admin!' });
