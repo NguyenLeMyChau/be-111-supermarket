@@ -12,6 +12,7 @@ const productRoutes = require('./src/routes/productRoutes');
 const employeeRoutes = require('./src/routes/employeeRoutes');
 const promotionRoutes = require('./src/routes/promotionRoutes');
 const warehouseRoutes = require('./src/routes/warehouseRoutes');
+const customerRoutes = require('./src/routes/customerRoutes');
 
 
 // Load environment variables from .env file into process.env 
@@ -29,7 +30,7 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json());
 
-// ROUTES
+// ROUTES Manager
 app.use('/api/auth', authRoutes);
 app.use('/api/supplier', authMiddleware(['manager']), supplierRoutes);
 app.use('/api/product', authMiddleware(['manager']), productRoutes);
@@ -37,6 +38,9 @@ app.use('/api/employee', authMiddleware(['manager']), employeeRoutes);
 app.use('/api/promotion', authMiddleware(['manager']), promotionRoutes);
 app.use('/api/warehouse', authMiddleware(['manager']), warehouseRoutes);
 app.use('/api/unit', warehouseRoutes);
+
+// ROUTES Customer
+app.use('/api/customer', authMiddleware(['customer']), customerRoutes);
 
 // Route yêu cầu quyền 'admin'
 app.get('/manager', authMiddleware(['manager']), (req, res) => {
