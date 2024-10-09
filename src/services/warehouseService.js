@@ -9,7 +9,18 @@ const TransactionInventory = require('../models/TransactionInventory');
 
 const { validStatuses } = require('../utils/MappingStatus');
 const { sendOrderEmail } = require('./emailService');
-const buffer = 10; // Khoảng để xác định trạng thái "Gần ngưỡng"
+
+function getWarehouseStatus(stockQuantity, minStockThreshold) {
+    const buffer = 10; // Khoảng để xác định trạng thái "Gần ngưỡng"
+
+    if (stockQuantity < minStockThreshold) {
+        return 'Hết hàng';
+    } else if (stockQuantity <= minStockThreshold + buffer) {
+        return 'Ít hàng';
+    } else {
+        return 'Còn hàng';
+    }
+}
 
 async function getAllWarehouse() {
     try {
@@ -17,14 +28,7 @@ async function getAllWarehouse() {
 
         const warehousesWithProductNames = warehouses.map(warehouse => {
             const warehouseObj = warehouse.toObject();
-            let status;
-            if (warehouseObj.stock_quantity < warehouseObj.min_stock_threshold) {
-                status = 'Hết hàng';
-            } else if (warehouseObj.stock_quantity <= warehouseObj.min_stock_threshold + buffer) {
-                status = 'Ít hàng';
-            } else {
-                status = 'Còn hàng';
-            }
+            const status = getWarehouseStatus(warehouseObj.stock_quantity, warehouseObj.min_stock_threshold);
             return {
                 ...warehouseObj,
                 product_name: warehouseObj.product_id ? warehouseObj.product_id.name : null,
@@ -51,14 +55,8 @@ async function getProductsByWarehouse(warehouseId) {
         const warehousesWithProductNames = await Promise.all(warehouses.map(async warehouse => {
             const warehouseObj = warehouse.toObject();
             const product = await Product.findById(warehouse.product_id).select('name').lean();
-            let status;
-            if (warehouseObj.stock_quantity < warehouseObj.min_stock_threshold) {
-                status = 'Hết hàng';
-            } else if (warehouseObj.stock_quantity <= warehouseObj.min_stock_threshold + buffer) {
-                status = 'Ít hàng';
-            } else {
-                status = 'Còn hàng';
-            }
+            const status = getWarehouseStatus(warehouseObj.stock_quantity, warehouseObj.min_stock_threshold);
+
             return {
                 ...warehouseObj,
                 product_name: product ? product.name : null,
@@ -243,14 +241,8 @@ const getWarehousesFromSupplierId = async (supplierId) => {
         const warehousesWithDetails = await Promise.all(warehouses.map(async (warehouse) => {
             const warehouseObj = warehouse.toObject();
             const product = await Product.findById(warehouse.product_id).select('name').lean();
-            let status;
-            if (warehouseObj.stock_quantity < warehouseObj.min_stock_threshold) {
-                status = 'Hết hàng';
-            } else if (warehouseObj.stock_quantity <= warehouseObj.min_stock_threshold + buffer) {
-                status = 'Ít hàng';
-            } else {
-                status = 'Còn hàng';
-            }
+            const status = getWarehouseStatus(warehouseObj.stock_quantity, warehouseObj.min_stock_threshold);
+
             return {
                 ...warehouseObj,
                 status: status,

@@ -4,14 +4,14 @@ const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv');
 const PORT = process.env.PORT || 5000;
 
-const connectDB = require('./src/config/configMongoDB');
-const authMiddleware = require('./src/middlewares/authMiddleware');
-const authRoutes = require('./src/routes/authRoutes');
-const supplierRoutes = require('./src/routes/supplierRoutes');
-const productRoutes = require('./src/routes/productRoutes');
-const employeeRoutes = require('./src/routes/employeeRoutes');
-const promotionRoutes = require('./src/routes/promotionRoutes');
-const warehouseRoutes = require('./src/routes/warehouseRoutes');
+const connectDB = require('../src/config/configMongoDB');
+const authMiddleware = require('../src/middlewares/authMiddleware');
+const authRoutes = require('../src/routes/authRoutes');
+const supplierRoutes = require('../src/routes/supplierRoutes');
+const productRoutes = require('../src/routes/productRoutes');
+const employeeRoutes = require('../src/routes/employeeRoutes');
+const promotionRoutes = require('../src/routes/promotionRoutes');
+const warehouseRoutes = require('../src/routes/warehouseRoutes');
 
 
 // Load environment variables from .env file into process.env 
@@ -51,5 +51,10 @@ app.get('/dashboard', authMiddleware(['manager', 'staff']), (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Hello, this is a test API!' });
+});
+module.exports = app;
 
 
