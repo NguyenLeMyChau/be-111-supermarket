@@ -23,7 +23,7 @@ connectDB();
 
 // Middleware for parsing incoming request bodies 
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: '*',
   credentials: true,
 }));
 app.use(cookieParser());
