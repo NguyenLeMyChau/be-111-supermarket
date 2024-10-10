@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const { formatCurrency } = require('../utils/Format');
 
 
 // Tạo transporter với cấu hình SMTP
@@ -34,11 +35,11 @@ const sendOrderEmail = async (orderInfo) => {
                         <li>
                             <strong>Tên sản phẩm:</strong> ${product.name} <br>
                             <strong>Số lượng:</strong> ${product.quantity} <br>
-                            <strong>Giá nhập:</strong> ${product.price_order} VND
+                            <strong>Giá nhập:</strong> ${formatCurrency(product.price_order)}
                         </li>
                     `).join('')}
                 </ul>
-                <p><strong>Tổng tiền:</strong> ${orderInfo.total} VND</p>
+                <p><strong>Tổng tiền:</strong> ${formatCurrency(orderInfo.total)}</p>
                 <p>Kính mong quý công ty xác nhận đơn hàng, nếu có vấn đề gì, vui lòng liên hệ qua thông tin bên dưới</p>
                 <p>Trân trọng!</p>
                 <p>Đội ngũ CAPY SMART</p>

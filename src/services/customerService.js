@@ -1,5 +1,7 @@
+const Account = require('../models/Account');
 const Cart = require('../models/Cart');
 const Product = require('../models/Product');
+const TransactionInventory = require('../models/TransactionInventory');
 
 async function getCartById(accountId) {
     try {
@@ -53,6 +55,39 @@ async function addProductToCart(accountId, productId, quantity, price) {
         throw new Error(`Error adding product to cart: ${err.message}`);
     }
 }
+
+async function payCart(accountId, products) {
+    try {
+
+        // Tính tổng giá trị của giỏ hàng
+        let totalAmount = 0;
+        for (const item of products) {
+            const product = await Product.findById(item.product_id);
+            if (!product) {
+                throw new Error(`Product with id ${item.product_id} not found`);
+            }
+            totalAmount += product.price * item.quantity;
+        }
+
+        // Cập nhật số lượng sản phẩm trong kho và lưu thông tin TransactionInventory
+        for (const item of products) {
+            // Lưu thông tin TransactionInventory
+            const transactionInventory = new TransactionInventory({
+                product_id: item.product_id,
+                quantity: item.quantity,
+                price: item.price,
+                type: 'Bán hàng',
+                status: true
+            });
+            await transactionInventory.save();
+        }
+
+        return { success: true, message: 'Payment successful' };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+}
+
 
 module.exports = {
     getCartById,
