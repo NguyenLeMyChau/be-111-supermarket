@@ -3,7 +3,7 @@ const { addProductToCart, getCartById } = require("../services/customerService")
 
 async function getCartByIdController(req, res) {
     try {
-        const { accountId } = req.body;
+        const accountId = req.query.accountId;
         const cart = await getCartById(accountId);
         res.status(200).json(cart);
     } catch (error) {
