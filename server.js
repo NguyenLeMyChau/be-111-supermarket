@@ -23,10 +23,20 @@ const app = express();
 connectDB();
 
 // Middleware for parsing incoming request bodies 
-app.use(cors({
-  origin: '*',
+const allowedOrigins = ['http://localhost:3000', 'http://localhost:19000', '*'];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (allowedOrigins.includes(origin) || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
-}));
+};
+
+app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json());
 

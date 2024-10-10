@@ -3,6 +3,7 @@ const Employee = require('../models/Employee');
 const Warehouse = require('../models/Warehouse');
 const Product = require('../models/Product');
 const Supplier = require('../models/Supplier');
+const Unit = require('../models/Unit');
 const SupplierOrderHeader = require('../models/SupplierOrder_Header');
 const SupplierOrderDetail = require('../models/SupplierOrder_Detail');
 const TransactionInventory = require('../models/TransactionInventory');
@@ -24,52 +25,68 @@ function getWarehouseStatus(stockQuantity, minStockThreshold) {
 
 async function getAllWarehouse() {
     try {
-        const warehouses = await Warehouse.find().populate('product_id', 'name');
+        // Tìm tất cả các warehouses
+        const warehouses = await Warehouse.find();
 
-        const warehousesWithProductNames = warehouses.map(warehouse => {
+        // Sử dụng Promise.all để xử lý đồng thời các warehouse
+        const warehousesWithProducts = await Promise.all(warehouses.map(async warehouse => {
             const warehouseObj = warehouse.toObject();
+
+            // Tìm tất cả sản phẩm theo item_code của warehouse
+            const products = await Product.find({ item_code: warehouse.item_code }).select('name unit_id supplier_id').lean();
+
+            // Tìm các sản phẩm có unit với quantity = 1
+            const productsWithValidUnit = await Promise.all(products.map(async product => {
+                if (product.unit_id) {
+                    // Tìm unit theo unit_id và kiểm tra quantity = 1
+                    const unit = await Unit.findOne({ _id: product.unit_id, quantity: 1 }).lean();
+                    if (unit) {
+                        // Bỏ các ký tự sau dấu '-' hoặc '/' hoặc '–' trong tên sản phẩm
+                        const cleanedName = product.name.split(/[-/–]/)[0].trim();
+
+                        return {
+                            ...product,
+                            name: cleanedName
+                        };
+                    }
+                }
+                return null; // Trả về null nếu không tìm thấy unit phù hợp
+            }));
+
+            // Loại bỏ các sản phẩm không có unit phù hợp (null)
+            const filteredProducts = productsWithValidUnit.filter(product => product !== null);
+
+            // Lọc ra sản phẩm trùng tên, chỉ giữ lại sản phẩm đầu tiên
+            const uniqueProducts = {};
+            const seenNames = new Set();
+
+            filteredProducts.forEach(product => {
+                if (!seenNames.has(product.name)) {
+                    seenNames.add(product.name);
+                    uniqueProducts[product.name] = product;
+                }
+            });
+
+            // Lấy sản phẩm đầu tiên từ uniqueProducts (nếu có)
+            const productObject = Object.values(uniqueProducts)[0] || null;
+
+            // Tính toán status dựa trên stock_quantity và min_stock_threshold
             const status = getWarehouseStatus(warehouseObj.stock_quantity, warehouseObj.min_stock_threshold);
+
+            // Trả về đối tượng bao gồm thông tin warehouse và sản phẩm phù hợp
             return {
                 ...warehouseObj,
-                product_name: warehouseObj.product_id ? warehouseObj.product_id.name : null,
-                product_id: undefined,
-                status: status
-            };
-        });
-
-        return warehousesWithProductNames;
-    } catch (err) {
-        throw new Error(`Error getting all warehouses: ${err.message}`);
-    }
-}
-
-// Lấy tất cả sản phẩm cùng nhà cung cấp với warehouse
-async function getProductsByWarehouse(warehouseId) {
-    try {
-        const warehouse = await Warehouse.findById(warehouseId).select('product_id');
-        const product = await Product.findById(warehouse.product_id).select('supplier_id');
-        const products = await Product.find({ supplier_id: product.supplier_id }).select('name');
-        const warehouses = await Warehouse.find({ product_id: { $in: products.map(product => product._id) } });
-        const supplier = await Supplier.findById(product.supplier_id).select('name email');
-
-        const warehousesWithProductNames = await Promise.all(warehouses.map(async warehouse => {
-            const warehouseObj = warehouse.toObject();
-            const product = await Product.findById(warehouse.product_id).select('name').lean();
-            const status = getWarehouseStatus(warehouseObj.stock_quantity, warehouseObj.min_stock_threshold);
-
-            return {
-                ...warehouseObj,
-                product_name: product ? product.name : null,
+                product: productObject,
                 status: status
             };
         }));
 
-        return { warehousesWithProductNames, supplier };
-
+        return warehousesWithProducts;
     } catch (err) {
-        throw new Error(`Error getting products by warehouse: ${err.message}`);
+        throw new Error(`Error getting warehouses with products: ${err.message}`);
     }
 }
+
 
 const getAllOrders = async () => {
     try {
@@ -233,37 +250,10 @@ const updateOrderStatus = async (orderId, newStatus, products) => {
     }
 };
 
-const getWarehousesFromSupplierId = async (supplierId) => {
-    try {
-        const products = await Product.find({ supplier_id: supplierId }).select('_id');
-        const warehouses = await Warehouse.find({ product_id: { $in: products.map(product => product._id) } });
-        // Thêm thuộc tính status và tên sản phẩm vào từng đối tượng kho hàng
-        const warehousesWithDetails = await Promise.all(warehouses.map(async (warehouse) => {
-            const warehouseObj = warehouse.toObject();
-            const product = await Product.findById(warehouse.product_id).select('name').lean();
-            const status = getWarehouseStatus(warehouseObj.stock_quantity, warehouseObj.min_stock_threshold);
-
-            return {
-                ...warehouseObj,
-                status: status,
-                product_name: product ? product.name : null
-            };
-        }));
-
-        return warehousesWithDetails;
-    }
-    catch (error) {
-        throw new Error(`Error getting warehouses from supplier id: ${error.message}`);
-    }
-}
-
-
 
 module.exports = {
     getAllWarehouse,
-    getProductsByWarehouse,
     getAllOrders,
     orderProductFromSupplier,
     updateOrderStatus,
-    getWarehousesFromSupplierId
 };

@@ -4,7 +4,9 @@ const AutoIncrement = require('mongoose-sequence')(mongoose);
 const warehouseSchema = new mongoose.Schema({
     stock_quantity: { type: Number, default: 0 },
     min_stock_threshold: { type: Number, default: 0 },
-    product_id: { type: mongoose.Schema.Types.ObjectId, ref: 'product' }
+    item_code: { type: String, required: true },
+    order_Price: { type: Number, default: 0 },
+    unit_convert: { type: Number, default: 0 },
 }, { timestamps: true });
 
 warehouseSchema.plugin(AutoIncrement, { inc_field: 'wareHouse_index' });
