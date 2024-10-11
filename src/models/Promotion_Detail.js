@@ -4,10 +4,7 @@ const Schema = mongoose.Schema;
 
 // Định nghĩa schema cho Promotion_Detail
 const PromotionDetailSchema = new Schema({
-  _id: {
-    type: Schema.Types.ObjectId,
-    auto: true, // Tự động tạo ObjectId
-  },
+ 
   promotionLine_id: {
     type: Schema.Types.ObjectId,
     ref: 'promotion_line', // Khóa ngoại liên kết với Promotion_Line
@@ -16,10 +13,6 @@ const PromotionDetailSchema = new Schema({
   product_id: {
     type: Schema.Types.ObjectId,
     ref: 'product', // Khóa ngoại liên kết với Product
-  },
-  unit_id: {
-    type: Schema.Types.ObjectId,
-    ref: 'unit', // Khóa ngoại liên kết với Unit
   },
   quantity: {
     type: Number,

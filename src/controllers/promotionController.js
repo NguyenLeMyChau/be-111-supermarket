@@ -1,4 +1,6 @@
 const promotionService = require("../services/promotionService");
+const mongoose = require('mongoose');
+const ObjectId = mongoose.Types.ObjectId;
 
 async function getPromotions(req, res) {
     try {
@@ -41,13 +43,30 @@ const addPromotionLine = async (req, res) => {
 
 const addPromotionDetail = async (req, res) => {
     try {
-        const promotionDetailData = req.body;
+        let promotionDetailData = req.body;
+
+        // Handle product_id: set to null if missing or invalid
+        if (!promotionDetailData.product_id || !ObjectId.isValid(promotionDetailData.product_id)) {
+            promotionDetailData.product_id = null;
+        } else {
+            promotionDetailData.product_id = new ObjectId(promotionDetailData.product_id);
+        }
+
+        // Handle product_donate: set to null if missing or invalid
+        if (!promotionDetailData.product_donate || !ObjectId.isValid(promotionDetailData.product_donate)) {
+            promotionDetailData.product_donate = null;
+        } else {
+            promotionDetailData.product_donate = new ObjectId(promotionDetailData.product_donate);
+        }
+
+        // Save the promotion detail with updated product_id and product_donate
         const savedPromotionDetail = await promotionService.addPromotionDetail(promotionDetailData);
         res.status(201).json(savedPromotionDetail);
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
 };
+
 
 module.exports = {
     getPromotions,
