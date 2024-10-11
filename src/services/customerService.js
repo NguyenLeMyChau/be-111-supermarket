@@ -1,7 +1,10 @@
+const mongoose = require('mongoose');
 const Account = require('../models/Account');
 const Cart = require('../models/Cart');
 const Product = require('../models/Product');
 const TransactionInventory = require('../models/TransactionInventory');
+const InvoiceSaleHeader = require('../models/InvoiceSale_Header');
+const InvoiceSaleDetail = require('../models/InvoiceSale_Detail');
 
 async function getCartById(accountId) {
     try {
@@ -56,34 +59,78 @@ async function addProductToCart(accountId, productId, quantity, price) {
     }
 }
 
-async function payCart(accountId, products) {
+async function removeAllProductInCart(accountId) {
     try {
+        // Tìm giỏ hàng của người dùng
+        let cart = await Cart.findOne({ account_id: accountId });
 
+        // Xóa toàn bộ sản phẩm trong giỏ hàng
+        cart.products = [];
+
+        // Lưu lại giỏ hàng đã được cập nhật
+        await cart.save();
+
+        return { success: true, message: 'All products removed from cart' };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+}
+
+async function payCart(customerId, products, staffId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
         // Tính tổng giá trị của giỏ hàng
         let totalAmount = 0;
         for (const item of products) {
-            const product = await Product.findById(item.product_id);
+            const product = await Product.findById(item.product_id).session(session);
             if (!product) {
                 throw new Error(`Product with id ${item.product_id} not found`);
             }
             totalAmount += product.price * item.quantity;
         }
 
-        // Cập nhật số lượng sản phẩm trong kho và lưu thông tin TransactionInventory
+        const invoiceSaleHeader = new InvoiceSaleHeader({
+            customer_id: customerId,
+            staff_id: staffId ? staffId : null,
+        });
+        await invoiceSaleHeader.save({ session });
+
+        // Cập nhật số lượng sản phẩm trong kho và lưu thông tin
         for (const item of products) {
+            // Lưu thông tin InvoiceSale
+            const invoiceSaleDetail = new InvoiceSaleDetail({
+                invoiceSaleHeader_id: invoiceSaleHeader._id,
+                product_id: item.product_id,
+                quantity: item.quantity,
+                price: item.price
+            });
+            await invoiceSaleDetail.save({ session });
+
             // Lưu thông tin TransactionInventory
             const transactionInventory = new TransactionInventory({
                 product_id: item.product_id,
                 quantity: item.quantity,
-                price: item.price,
                 type: 'Bán hàng',
                 status: true
             });
-            await transactionInventory.save();
+            await transactionInventory.save({ session });
+
         }
+
+        await removeAllProductInCart(customerId);
+
+        // Commit transaction
+        await session.commitTransaction();
+        session.endSession();
 
         return { success: true, message: 'Payment successful' };
     } catch (error) {
+        // Rollback transaction
+        await session.abortTransaction();
+        session.endSession();
+
         return { success: false, message: error.message };
     }
 }
@@ -92,5 +139,6 @@ async function payCart(accountId, products) {
 module.exports = {
     getCartById,
     addProductToCart,
+    payCart
 }
 
