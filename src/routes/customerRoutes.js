@@ -6,4 +6,6 @@ router.get('/get-cart-by-id', customerController.getCartByIdController);
 
 router.post('/add-product-to-cart', customerController.addProductToCartController);
 
+router.post('/pay-cart', customerController.payCartController);
+
 module.exports = router;
