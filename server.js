@@ -70,6 +70,11 @@ app.listen(PORT, () => {
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Hello, this is a test API!' });
 });
+
+app.get('/', (req, res) => {
+  res.json({ message: 'Hello, welcome to supermarket' });
+});
+
 module.exports = app;
 
 
