@@ -40,13 +40,15 @@ async function getAllWarehouse() {
                 if (product.unit_id) {
                     // Tìm unit theo unit_id và kiểm tra quantity = 1
                     const unit = await Unit.findOne({ _id: product.unit_id, quantity: 1 }).lean();
+                    const supplier = await Supplier.findById(product.supplier_id).select('name').lean();
                     if (unit) {
                         // Bỏ các ký tự sau dấu '-' hoặc '/' hoặc '–' trong tên sản phẩm
                         const cleanedName = product.name.split(/[-/–]/)[0].trim();
 
                         return {
                             ...product,
-                            name: cleanedName
+                            name: cleanedName,
+                            supplier_name: supplier ? supplier.name : null,
                         };
                     }
                 }
@@ -340,10 +342,19 @@ const getAllBill = async () => {
 
             // Lấy tên sản phẩm dựa vào product_id
             const productsWithNames = await Promise.all(orderDetails.flatMap(detail => detail.products.map(async (product) => {
-                const productInfo = await Product.findById(product.product_id).select('name').lean();
+                const productInfo = await Product.findById(product.product_id).select('name item_code unit_id').lean();
+
+                let unitName = null;
+                if (productInfo && productInfo.unit_id) {
+                    const unitInfo = await Unit.findById(productInfo.unit_id).select('description').lean();
+                    unitName = unitInfo ? unitInfo.description : null;
+                }
+
                 return {
                     product_id: product.product_id,
                     name: productInfo ? productInfo.name : null,
+                    item_code: productInfo ? productInfo.item_code : null,
+                    unit_name: unitName,
                     quantity: product.quantity,
                     price: product.price_order,
                     total: product.quantity * product.price_order

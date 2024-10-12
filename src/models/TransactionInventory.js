@@ -6,7 +6,6 @@ const TransactionInventorySchema = new mongoose.Schema({
     quantity: { type: Number, default: 0 },
     type: { type: String, enum: ['Nhập hàng', 'Bán hàng', 'Trả hàng'], required: true },
     order_id: { type: mongoose.Schema.Types.ObjectId, ref: 'supplierOrder_header' },
-    status: { type: Boolean, default: false }
 }, { timestamps: true });
 
 TransactionInventorySchema.plugin(AutoIncrement, { inc_field: 'transactionInventory_index' });
