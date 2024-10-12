@@ -14,6 +14,7 @@ const promotionRoutes = require('./src/routes/promotionRoutes');
 const warehouseRoutes = require('./src/routes/warehouseRoutes');
 const customerRoutes = require('./src/routes/customerRoutes');
 const userRoutes = require('./src/routes/userRoutes');
+const unitRoutes = require('./src/routes/unitRoutes');
 
 // Load environment variables from .env file into process.env 
 dotenv.config();
@@ -47,7 +48,7 @@ app.use('/api/product', authMiddleware(['manager']), productRoutes);
 app.use('/api/employee', authMiddleware(['manager']), employeeRoutes);
 app.use('/api/promotion', authMiddleware(['manager']), promotionRoutes);
 app.use('/api/warehouse', authMiddleware(['manager']), warehouseRoutes);
-app.use('/api/unit', warehouseRoutes);
+app.use('/api/unit', authMiddleware(['manager']), unitRoutes);
 
 // ROUTES Customer
 app.use('/api/customer', authMiddleware(['customer']), customerRoutes);

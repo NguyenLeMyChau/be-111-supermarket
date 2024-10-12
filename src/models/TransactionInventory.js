@@ -5,7 +5,7 @@ const TransactionInventorySchema = new mongoose.Schema({
     product_id: { type: mongoose.Schema.Types.ObjectId, ref: 'product' },
     quantity: { type: Number, default: 0 },
     type: { type: String, enum: ['Nhập hàng', 'Bán hàng', 'Trả hàng'], required: true },
-    order_id: { type: mongoose.Schema.Types.ObjectId, ref: 'order' },
+    order_id: { type: mongoose.Schema.Types.ObjectId, ref: 'supplierOrder_header' },
     status: { type: Boolean, default: false }
 }, { timestamps: true });
 

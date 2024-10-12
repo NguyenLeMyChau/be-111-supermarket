@@ -9,6 +9,20 @@ const getAllUnits = async () => {
     }
 };
 
+const getUnitById = async (unitId) => {
+    try {
+        const unit = await Unit.findById(unitId);
+        if (!unit) {
+            throw new Error('Unit not found');
+        }
+
+        return unit;
+    } catch (error) {
+        throw new Error('Error fetching units: ' + error.message);
+    }
+}
+
 module.exports = {
     getAllUnits,
+    getUnitById
 };
