@@ -4,4 +4,8 @@ const router = express.Router();
 
 router.get('/get-suppliers', supplierController.getSuppliers);
 
+router.post('/add-supplier', supplierController.addSupplierController);
+
+router.put('/update-supplier/:supplierId', supplierController.updateSupplierController);
+
 module.exports = router;

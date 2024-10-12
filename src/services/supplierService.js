@@ -19,7 +19,28 @@ async function getAllSupplier() {
     }
 }
 
+async function addSupplier(supplierData) {
+    try {
+        const newSupplier = new Supplier(supplierData);
+        await newSupplier.save();
+        return newSupplier;
+    } catch (err) {
+        throw new Error(`Error adding supplier: ${err.message}`);
+    }
+}
+
+async function updateSupplier(supplierId, supplierData) {
+    try {
+        const updatedSupplier = await Supplier.findByIdAndUpdate(supplierId, supplierData, { new: true });
+        return updatedSupplier;
+    } catch (err) {
+        throw new Error(`Error updating supplier: ${err.message}`);
+    }
+
+}
 
 module.exports = {
-    getAllSupplier
+    getAllSupplier,
+    addSupplier,
+    updateSupplier,
 };
