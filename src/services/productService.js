@@ -20,6 +20,32 @@ async function getAllCategory() {
     }
 }
 
+async function addCategory(categoryData) {
+    try {
+        const category = new Category(categoryData);
+        await category.save();
+        return category;
+    } catch (err) {
+        throw new Error(`Error adding category: ${err.message}`);
+    }
+}
+
+async function updateCategory(categoryId, categoryData) {
+    try {
+        const category = await Category.findById(categoryId);
+        if (!category) {
+            throw new Error('Category not found');
+        }
+
+        category.set(categoryData);
+        await category.save();
+        return category;
+    }
+    catch (err) {
+        throw new Error(`Error removing category: ${err.message}`);
+    }
+}
+
 async function getAllProduct() {
     try {
         const products = await Product.find();
@@ -64,6 +90,8 @@ async function getProductsDetail(productId) {
 
 module.exports = {
     getAllCategory,
+    addCategory,
+    updateCategory,
     getAllProduct,
     getProductsBySupplierId,
     getProductsDetail,

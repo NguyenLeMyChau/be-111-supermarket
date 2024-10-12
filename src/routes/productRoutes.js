@@ -4,6 +4,10 @@ const router = express.Router();
 
 router.get('/get-categories', productController.getCategories);
 
+router.post('/add-category', productController.addCategoryController);
+
+router.put('/update-category/:categoryId', productController.updateCategoryController);
+
 router.get('/get-products', productController.getProducts);
 
 router.get('/get-products-by-supplier/:supplierId', productController.findProductBySupplierId);
