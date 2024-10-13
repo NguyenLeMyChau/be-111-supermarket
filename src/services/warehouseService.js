@@ -40,13 +40,15 @@ async function getAllWarehouse() {
                 if (product.unit_id) {
                     // Tìm unit theo unit_id và kiểm tra quantity = 1
                     const unit = await Unit.findOne({ _id: product.unit_id, quantity: 1 }).lean();
+                    const supplier = await Supplier.findById(product.supplier_id).select('name').lean();
                     if (unit) {
                         // Bỏ các ký tự sau dấu '-' hoặc '/' hoặc '–' trong tên sản phẩm
                         const cleanedName = product.name.split(/[-/–]/)[0].trim();
 
                         return {
                             ...product,
-                            name: cleanedName
+                            name: cleanedName,
+                            supplier_name: supplier ? supplier.name : null,
                         };
                     }
                 }
@@ -104,7 +106,8 @@ const getAllOrders = async () => {
                     product_id: product.product_id,
                     name: productInfo ? productInfo.name : null,
                     quantity: product.quantity,
-                    price: product.price_order
+                    price: product.price_order,
+                    total: product.quantity * product.price_order
                 };
             })));
 
@@ -250,10 +253,137 @@ const updateOrderStatus = async (orderId, newStatus, products) => {
     }
 };
 
+const addBillWarehouse = async (supplierId, accountId, productList) => {
+
+    const session = await mongoose.startSession();
+    let transactionCommitted = false;
+
+    try {
+        session.startTransaction();
+
+        const supplierOrderHeader = new SupplierOrderHeader({
+            supplier_id: supplierId,
+            account_id: accountId,
+        });
+
+        const savedOrderHeader = await supplierOrderHeader.save({ session });
+
+        const supplierOrderDetail = new SupplierOrderDetail({
+            supplierOrderHeader_id: savedOrderHeader._id,
+            products: productList.map(product => ({
+                product_id: product.product_id,
+                quantity: product.quantity,
+                price_order: product.price_order,
+                total: product.quantity * product.price_order
+            })),
+        });
+
+        const savedOrderDetail = await supplierOrderDetail.save({ session });
+
+        // Tạo và lưu TransactionInventory cho mỗi sản phẩm
+        for (const product of productList) {
+            const transactionInventory = new TransactionInventory({
+                product_id: product.product_id,
+                quantity: product.quantity,
+                type: 'Nhập hàng',
+                order_id: savedOrderHeader._id,
+            });
+
+            await transactionInventory.save({ session });
+        }
+
+        //Cập nhật số lượng trong kho
+        for (const product of productList) {
+            const unit = await Unit.findById(product.unit_id).session(session); // Sử dụng session cho findById
+            const conversionFactor = unit.quantity || 1;
+
+            // Tìm warehouse bằng item_code, có session
+            const warehouse = await Warehouse.findOne({ item_code: product.item_code }).session(session);
+
+            // Tính số lượng cần cập nhật (quantity * conversionFactor)
+            const quantityToAdd = product.quantity * conversionFactor;
+
+            console.log('Số lượng cập nhật:', quantityToAdd);
+
+            // Cập nhật số lượng trong kho
+            console.log(`Trước cập nhật của ${warehouse.item_code}: ${warehouse.stock_quantity}`);
+            warehouse.stock_quantity += quantityToAdd;
+            console.log(`Sau cập nhật của ${warehouse.item_code}: ${warehouse.stock_quantity}`);
+
+            await warehouse.save({ session });
+        }
+
+        await session.commitTransaction();
+        transactionCommitted = true;
+
+        return {
+            orderHeader: savedOrderHeader,
+            orderDetail: savedOrderDetail
+        };
+    } catch (error) {
+        if (!transactionCommitted) {
+            await session.abortTransaction();
+        }
+        console.error('Error placing order, transaction rolled back:', error);
+        throw error;
+    } finally {
+        session.endSession();
+    }
+};
+
+const getAllBill = async () => {
+    try {
+        const orders = await SupplierOrderHeader.find().populate('supplier_id', 'name').lean();
+
+        // Lấy thông tin nhân viên và chuyển đổi trạng thái của từng đơn hàng
+        const ordersWithDetails = await Promise.all(orders.map(async (order) => {
+            const employee = await Employee.findOne({ account_id: order.account_id }).select('name phone email');
+            const orderDetails = await SupplierOrderDetail.find({ supplierOrderHeader_id: order._id }).lean();
+
+            // Lấy tên sản phẩm dựa vào product_id
+            const productsWithNames = await Promise.all(orderDetails.flatMap(detail => detail.products.map(async (product) => {
+                const productInfo = await Product.findById(product.product_id).select('name item_code unit_id').lean();
+
+                let unitName = null;
+                if (productInfo && productInfo.unit_id) {
+                    const unitInfo = await Unit.findById(productInfo.unit_id).select('description').lean();
+                    unitName = unitInfo ? unitInfo.description : null;
+                }
+
+                return {
+                    product_id: product.product_id,
+                    name: productInfo ? productInfo.name : null,
+                    item_code: productInfo ? productInfo.item_code : null,
+                    unit_name: unitName,
+                    quantity: product.quantity,
+                    price: product.price_order,
+                    total: product.quantity * product.price_order
+                };
+            })));
+
+            return {
+                ...order,
+                employee: employee ? {
+                    name: employee.name,
+                    phone: employee.phone,
+                    email: employee.email
+                } : null,
+                products: productsWithNames
+            };
+        }));
+
+        return ordersWithDetails;
+    } catch (error) {
+        throw new Error(`Error getting all bill: ${error.message}`);
+    }
+};
+
 
 module.exports = {
     getAllWarehouse,
     getAllOrders,
     orderProductFromSupplier,
     updateOrderStatus,
+    addBillWarehouse,
+    getAllBill
 };

@@ -1,4 +1,4 @@
-const { getAllCategory, getAllProduct, getProductsBySupplierId, getProductsDetail } = require("../services/productService");
+const { getAllCategory, getAllProduct, getProductsBySupplierId, getProductsDetail, addCategory, updateCategory, addProductWithWarehouse } = require("../services/productService");
 
 
 async function getCategories(req, res) {
@@ -7,6 +7,29 @@ async function getCategories(req, res) {
         res.status(200).json(categories);
     } catch (error) {
         console.error(`Error get categories: ${error.message}`);
+        res.status(400).json({ message: error.message });
+    }
+}
+
+async function addCategoryController(req, res) {
+    try {
+        const categoryData = req.body;
+        const category = await addCategory(categoryData);
+        res.status(200).json(category);
+    } catch (error) {
+        console.error(`Error add category: ${error.message}`);
+        res.status(400).json({ message: error.message });
+    }
+}
+
+async function updateCategoryController(req, res) {
+    try {
+        const { categoryId } = req.params;
+        const categoryData = req.body;
+        const category = await updateCategory(categoryId, categoryData);
+        res.status(200).json(category);
+    } catch (error) {
+        console.error(`Error update category: ${error.message}`);
         res.status(400).json({ message: error.message });
     }
 }
@@ -42,9 +65,23 @@ async function getProductsDetailController(req, res) {
         res.status(400).json({ message: error.message });
     }
 }
+
+const addProductWithWarehouseController = async (req, res) => {
+    try {
+        const productData = req.body;
+        const product = await addProductWithWarehouse(productData);
+        res.status(200).json(product);
+    } catch (error) {
+        console.error(`Error add product: ${error.message}`);
+        res.status(400).json({ message: error.message });
+    }
+}
 module.exports = {
     getCategories,
+    addCategoryController,
+    updateCategoryController,
     getProducts,
     findProductBySupplierId,
     getProductsDetailController,
+    addProductWithWarehouseController
 };

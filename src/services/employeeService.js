@@ -21,6 +21,32 @@ async function getAllEmployee() {
     }
 }
 
+async function updateEmployee(employeeId, employeeData) {
+    try {
+        const employee = await Employee.findById(employeeId);
+        if (!employee) {
+            throw new Error('Employee not found');
+        }
+
+        const updatedEmployee = await Employee.findByIdAndUpdate(employeeId, employeeData, { new: true });
+
+        // Tìm Account liên quan đến Employee
+        const account = await Account.findOne({ _id: employeeData.account_id });
+        if (account) {
+            // Cập nhật trường phone trong Account
+            account.phone = employeeData.phone;
+            account.active = employeeData.active;
+            await account.save();
+        }
+
+        return updatedEmployee;
+    }
+    catch (err) {
+        throw new Error(`Error updating employee: ${err.message}`);
+    }
+}
+
 module.exports = {
     getAllEmployee,
+    updateEmployee,
 };
