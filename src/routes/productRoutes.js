@@ -16,4 +16,6 @@ router.get('/get-product-detail/:productId', productController.getProductsDetail
 
 router.post('/add-product', productController.addProductWithWarehouseController);
 
+router.put('/update-product/:productId', productController.updateProductController);
+
 module.exports = router;

@@ -106,7 +106,7 @@ const addProductWithWarehouse = async (productData) => {
         // Bước 1: Kiểm tra xem sản phẩm với cùng item_code và unit_id đã tồn tại chưa
         const existingProduct = await Product.findOne({ item_code, unit_id }).session(session);
         if (existingProduct) {
-            throw new Error('Sản phẩm với item_code và đơn vị này đã tồn tại.');
+            throw new Error('Sản phẩm với item_code');
         }
 
         // Bước 2: Kiểm tra xem barcode đã tồn tại chưa
@@ -151,6 +151,55 @@ const addProductWithWarehouse = async (productData) => {
     }
 };
 
+const updateProduct = async (productId, productData) => {
+    const session = await mongoose.startSession(); // Nếu bạn đang sử dụng session cho transaction
+    session.startTransaction();
+
+    try {
+        const product = await Product.findById(productId).session(session);
+        if (!product) {
+            throw new Error('Product not found');
+        }
+
+        const { item_code, unit_id, barcode, min_stock_threshold } = productData;
+
+        // Bước 1: Kiểm tra xem sản phẩm với cùng item_code và unit_id đã tồn tại chưa
+        const existingProduct = await Product.findOne({ item_code, unit_id }).session(session);
+        if (existingProduct && existingProduct._id.toString() !== productId.toString()) {
+            throw new Error('Sản phẩm với item_code và đơn vị này đã tồn tại.');
+        }
+
+        // Bước 2: Kiểm tra xem barcode đã tồn tại chưa
+        const existingBarcode = await Product.findOne({ barcode }).session(session);
+        if (existingBarcode && existingBarcode._id.toString() !== productId.toString()) {
+            throw new Error('Sản phẩm với mã barcode này đã tồn tại.');
+        }
+
+        // Bước 3: Tìm warehouse theo item_code và cập nhật min_stock_threshold
+        const warehouse = await Warehouse.findOne({ item_code }).session(session);
+        if (!warehouse) {
+            throw new Error('Warehouse not found for this item_code');
+        }
+
+        // Cập nhật giá trị min_stock_threshold
+        warehouse.min_stock_threshold = min_stock_threshold;
+        await warehouse.save({ session });
+
+        // Cập nhật product
+        product.set(productData);
+        await product.save({ session });
+
+        await session.commitTransaction(); // Hoàn thành transaction
+        session.endSession(); // Kết thúc session
+
+        return product;
+    } catch (err) {
+        await session.abortTransaction(); // Hủy transaction nếu có lỗi
+        session.endSession(); // Kết thúc session
+        throw new Error(`${err.message}`);
+    }
+};
+
 
 module.exports = {
     getAllCategory,
@@ -160,4 +209,5 @@ module.exports = {
     getProductsBySupplierId,
     getProductsDetail,
     addProductWithWarehouse,
+    updateProduct,
 };
