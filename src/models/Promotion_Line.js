@@ -22,11 +22,7 @@ const PromotionLineSchema = new Schema({
     type: Date,
     required: true,
   },
-  status: {
-    type: String,
-    required: true,
-    enum: ['active', 'inactive'],
-  },
+  isActive: { type: Boolean, default: false },
   type: {
     type: String,
     required: true,

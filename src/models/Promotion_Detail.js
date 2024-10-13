@@ -36,11 +36,14 @@ const PromotionDetailSchema = new Schema({
   amount_limit: {
     type: Number,
   },
+  voucher:{
+    type:String,
+  }
 }, {
   timestamps: true,
 });
 
-PromotionDetailSchema.plugin(AutoIncrement, { inc_field: 'productPriceDetail_index' });
+PromotionDetailSchema.plugin(AutoIncrement, { inc_field: 'promotionDetail_index' });
 
 
 // Tạo model từ schema

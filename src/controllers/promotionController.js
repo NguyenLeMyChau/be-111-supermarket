@@ -67,11 +67,68 @@ const addPromotionDetail = async (req, res) => {
     }
 };
 
+const updatePromotionHeader = async (req, res) => {
+    const { id } = req.params; // Lấy ID từ tham số URL
+    const promotionData = req.body; // Lấy dữ liệu từ body của yêu cầu
+
+    try {
+        const updatedPromotion = await promotionService.updatePromotionHeader(id, promotionData);
+        res.status(200).json({ message: 'Promotion header updated successfully', data: updatedPromotion });
+    } catch (error) {
+        console.error('Failed to update promotion header:', error);
+        res.status(400).json({ message: error.message });
+    }
+};
+const updatePromotionLine = async (req, res) => {
+    const { id } = req.params; 
+    const promotionLineData = req.body; 
+
+    try {
+     
+        const updatedPromotionLine = await promotionService.updatePromotionLine(id, promotionLineData);
+
+        res.status(200).json(updatedPromotionLine);
+    } catch (error) {
+        res.status(500).json({ error: 'Cập nhật Promotion Line thất bại: ' + error.message });
+    }
+};
+
+const updatePromotionDetail = async (req, res) => {
+    const { id } = req.params;
+    const promotionDetailData = req.body; 
+
+    try {
+        if (!promotionDetailData.product_id || !ObjectId.isValid(promotionDetailData.product_id)) {
+            promotionDetailData.product_id = null;
+        } else {
+            promotionDetailData.product_id = new ObjectId(promotionDetailData.product_id);
+        }
+
+        // Handle product_donate: set to null if missing or invalid
+        if (!promotionDetailData.product_donate || !ObjectId.isValid(promotionDetailData.product_donate)) {
+            promotionDetailData.product_donate = null;
+        } else {
+            promotionDetailData.product_donate = new ObjectId(promotionDetailData.product_donate);
+        }
+        const updatedPromotionDetail = await promotionService.updatePromotionDetail(id, promotionDetailData);
+
+        if (!updatedPromotionDetail) {
+            return res.status(404).json({ error: 'Promotion Detail không tồn tại.' });
+        }
+
+        res.status(200).json(updatedPromotionDetail);
+    } catch (error) {
+        res.status(500).json({ error: 'Cập nhật Promotion Detail thất bại: ' + error.message });
+    }
+};
 
 module.exports = {
     getPromotions,
     addPromotionHeader,
     getAllPromotionLines,
     addPromotionLine,
-    addPromotionDetail
+    addPromotionDetail,
+    updatePromotionHeader,
+    updatePromotionLine,
+    updatePromotionDetail
 };
