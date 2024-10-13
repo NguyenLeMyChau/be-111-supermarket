@@ -253,7 +253,7 @@ const updateOrderStatus = async (orderId, newStatus, products) => {
     }
 };
 
-const addBillWarehouse = async (supplierId, accountId, productList) => {
+const addBillWarehouse = async (supplierId, accountId, billId, productList) => {
 
     const session = await mongoose.startSession();
     let transactionCommitted = false;
@@ -261,9 +261,16 @@ const addBillWarehouse = async (supplierId, accountId, productList) => {
     try {
         session.startTransaction();
 
+        // Kiểm tra xem billId đã tồn tại hay chưa
+        const existingOrder = await SupplierOrderHeader.findOne({ bill_id: billId }).session(session);
+        if (existingOrder) {
+            throw new Error('Mã phiếu nhập kho đã tồn tại. Vui lòng kiểm tra lại');
+        }
+
         const supplierOrderHeader = new SupplierOrderHeader({
             supplier_id: supplierId,
             account_id: accountId,
+            bill_id: billId,
         });
 
         const savedOrderHeader = await supplierOrderHeader.save({ session });
@@ -325,7 +332,7 @@ const addBillWarehouse = async (supplierId, accountId, productList) => {
             await session.abortTransaction();
         }
         console.error('Error placing order, transaction rolled back:', error);
-        throw error;
+        throw new Error(`${error.message}`);
     } finally {
         session.endSession();
     }
