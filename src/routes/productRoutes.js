@@ -14,4 +14,6 @@ router.get('/get-products-by-supplier/:supplierId', productController.findProduc
 
 router.get('/get-product-detail/:productId', productController.getProductsDetailController);
 
+router.post('/add-product', productController.addProductWithWarehouseController);
+
 module.exports = router;
