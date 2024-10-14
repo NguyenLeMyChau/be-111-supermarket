@@ -3,7 +3,7 @@ const priceService = require('../services/priceService');
 
 const getAllProductPrice = async (req, res) => {
   try {
-    const productPriceHeaders = await priceService.getAllProductPrice();
+    const productPriceHeaders = await priceService.getAllProductPrices();
     res.status(200).json(productPriceHeaders);
   } catch (error) {
     res.status(500).json({ message: error.message });
