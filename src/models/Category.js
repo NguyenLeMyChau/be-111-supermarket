@@ -14,7 +14,11 @@ const CategorySchema = new Schema({
     type: String,
     trim: true,
   },
-},{
+  img: {
+    type: String,
+    trim: true,
+  }
+}, {
   timestamps: true, // Tự động thêm createdAt và updatedAt
 });
 CategorySchema.plugin(AutoIncrement, { inc_field: 'category_index' });
