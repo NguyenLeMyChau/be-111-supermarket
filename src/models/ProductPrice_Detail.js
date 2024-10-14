@@ -7,11 +7,6 @@ const productPriceDetailSchema = new mongoose.Schema({
     ref: 'productPriceHeader',
     required: true
   },
-  unit_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Unit',
-    required: true
-  },
   product_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',

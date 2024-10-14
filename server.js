@@ -28,6 +28,7 @@ const customerRoutes = require('./src/routes/customerRoutes');
 const userRoutes = require('./src/routes/userRoutes');
 const unitRoutes = require('./src/routes/unitRoutes');
 const uploadRoutes = require('./src/routes/uploadRoutes');
+const priceRoutes = require('./src/routes/priceRoutes')
 
 // ROUTES Manager
 app.use('/api/auth', authRoutes);
@@ -37,6 +38,7 @@ app.use('/api/employee', authMiddleware(['manager']), employeeRoutes);
 app.use('/api/promotion', authMiddleware(['manager']), promotionRoutes);
 app.use('/api/warehouse', authMiddleware(['manager']), warehouseRoutes);
 app.use('/api/unit', authMiddleware(['manager']), unitRoutes);
+app.use('/api/price', authMiddleware(['manager']), priceRoutes);
 
 // ROUTES Customer
 app.use('/api/customer', authMiddleware(['customer']), customerRoutes);

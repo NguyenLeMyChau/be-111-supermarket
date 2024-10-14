@@ -18,15 +18,7 @@ const productPriceHeaderSchema = new mongoose.Schema({
     type: String,
     enum: ['active', 'inactive'], // Hoặc bạn có thể sử dụng boolean cho trạng thái
     default: 'active'
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  },
+  }
 },{
     timestamps: true, // Tự động thêm createdAt và updatedAt
   });
