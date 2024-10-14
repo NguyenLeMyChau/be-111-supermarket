@@ -1,4 +1,4 @@
-const { getAllWarehouse, getProductsByWarehouse, orderProductFromSupplier, updateOrderStatus, getAllOrders, getWarehousesFromSupplierId, addBillWarehouse, getAllBill } = require("../services/warehouseService");
+const { getAllWarehouse, getProductsByWarehouse, orderProductFromSupplier, updateOrderStatus, getAllOrders, getWarehousesFromSupplierId, addBillWarehouse, getAllBill, updateBill } = require("../services/warehouseService");
 
 
 async function getWarehouses(req, res) {
@@ -75,6 +75,16 @@ async function getAllBillController(req, res) {
     }
 }
 
+const updateBillController = async (req, res) => {
+    try {
+        const { oldBillId, newBillId, productList } = req.body;
+        const result = await updateBill(oldBillId, newBillId, productList);
+        return res.status(200).json(result);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+}
+
 
 module.exports = {
     getWarehouses,
@@ -82,5 +92,6 @@ module.exports = {
     orderProductFromSupplierController,
     updateOrderStatusController,
     addBillWarehouseController,
-    getAllBillController
+    getAllBillController,
+    updateBillController
 };

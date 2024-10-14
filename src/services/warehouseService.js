@@ -280,8 +280,6 @@ const addBillWarehouse = async (supplierId, accountId, billId, productList) => {
             products: productList.map(product => ({
                 product_id: product.product_id,
                 quantity: product.quantity,
-                price_order: product.price_order,
-                total: product.quantity * product.price_order
             })),
         });
 
@@ -361,10 +359,9 @@ const getAllBill = async () => {
                     product_id: product.product_id,
                     name: productInfo ? productInfo.name : null,
                     item_code: productInfo ? productInfo.item_code : null,
+                    unit_id: productInfo ? productInfo.unit_id : null,
                     unit_name: unitName,
                     quantity: product.quantity,
-                    price: product.price_order,
-                    total: product.quantity * product.price_order
                 };
             })));
 
@@ -385,6 +382,105 @@ const getAllBill = async () => {
     }
 };
 
+const updateBill = async (oldBillId, newBillId, productList) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+
+        // Bước 0: Kiểm tra xem newBillId đã tồn tại trong db hay chưa
+        const existingNewBill = await SupplierOrderHeader.findOne({ bill_id: newBillId }).session(session);
+        if (existingNewBill) {
+            throw new Error('Mã phiếu nhập này đã tồn tại.');
+        }
+
+        // Bước 1: Tìm và cập nhật SupplierOrderHeader bằng oldBillId
+        const header = await SupplierOrderHeader.findOne({ bill_id: oldBillId }).session(session);
+
+        if (!header) {
+            throw new Error('Không tìm thấy đơn hàng với mã oldBillId này.');
+        }
+
+        // Cập nhật bill_id thành newBillId
+        header.set({ bill_id: newBillId });
+
+        // Lưu cập nhật cho SupplierOrderHeader
+        await header.save();
+
+        // Bước 2: Tìm và cập nhật SupplierOrderDetail theo supplierOrderHeader_id
+        const details = await SupplierOrderDetail.findOne({ supplierOrderHeader_id: header._id }).session(session);
+        if (!details) {
+            throw new Error('Không tìm thấy chi tiết đơn hàng cho oldBillId này.');
+        }
+
+        // Cập nhật chi tiết đơn hàng với danh sách sản phẩm mới
+        details.set({ products: productList });
+        await details.save();
+
+        // Bước 3: Cập nhật Warehouse và TransactionInventory
+        for (const product of productList) {
+            const unit = await Unit.findById(product.unit_id).session(session);
+            const conversionFactor = unit.quantity || 1;
+
+            // Tìm warehouse hiện tại
+            const warehouse = await Warehouse.findOne({ item_code: product.item_code }).session(session);
+            if (!warehouse) {
+                throw new Error(`Không tìm thấy kho với item_code: ${product.item_code}`);
+            }
+
+            // Tìm giao dịch cũ trong TransactionInventory dựa vào product_id và oldBillId
+            const existingTransaction = await TransactionInventory.findOne({
+                product_id: product.product_id,
+                order_id: header._id // Dựa theo _id của header
+            }).session(session);
+
+            if (existingTransaction) {
+                // Tính lại số lượng cũ (đã nhân với conversionFactor trước đó)
+                const oldQuantity = existingTransaction.quantity * conversionFactor;
+
+                // Trừ số lượng cũ ra khỏi kho
+                warehouse.stock_quantity -= oldQuantity;
+            }
+
+            // Tính số lượng mới cần thêm vào kho
+            const newQuantity = product.quantity * conversionFactor;
+
+            // Cộng số lượng mới vào kho
+            warehouse.stock_quantity += newQuantity;
+
+            // Lưu cập nhật kho
+            await warehouse.save({ session });
+
+            // Nếu đã có transaction cũ thì cập nhật, nếu chưa thì tạo mới
+            if (existingTransaction) {
+                existingTransaction.quantity = product.quantity;
+                await existingTransaction.save({ session });
+            } else {
+                const newTransaction = new TransactionInventory({
+                    product_id: product.product_id,
+                    quantity: product.quantity,
+                    type: 'Nhập hàng',
+                    order_id: header._id, // Dùng _id mới từ header
+                });
+                await newTransaction.save({ session });
+            }
+        }
+
+        // Commit transaction nếu không có lỗi
+        await session.commitTransaction();
+        session.endSession();
+
+        return { message: 'Cập nhật đơn hàng thành công' };
+
+    } catch (error) {
+        // Rollback transaction nếu có lỗi
+        await session.abortTransaction();
+        session.endSession();
+        throw new Error(`Có lỗi xảy ra khi cập nhật đơn hàng: ${error.message}`);
+    }
+};
+
+
 
 module.exports = {
     getAllWarehouse,
@@ -392,5 +488,6 @@ module.exports = {
     orderProductFromSupplier,
     updateOrderStatus,
     addBillWarehouse,
-    getAllBill
+    getAllBill,
+    updateBill
 };

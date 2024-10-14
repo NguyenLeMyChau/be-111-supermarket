@@ -6,10 +6,8 @@ const supplierOrderDetailSchema = new mongoose.Schema({
     products: [{
         product_id: { type: mongoose.Schema.Types.ObjectId, ref: 'product' },
         quantity: { type: Number, default: 0 },
-        price_order: { type: Number, default: 0 },
-        total: { type: Number, default: 0 }
     }],
-});
+}, { timestamps: true });
 
 supplierOrderDetailSchema.plugin(AutoIncrement, { inc_field: 'supplierOrderDetail_index' });
 

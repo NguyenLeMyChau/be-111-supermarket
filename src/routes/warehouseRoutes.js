@@ -9,6 +9,5 @@ router.post('/order-product-from-supplier', warehouseController.orderProductFrom
 router.put('/update-order-status', warehouseController.updateOrderStatusController);
 router.post('/add-bill-warehouse', warehouseController.addBillWarehouseController);
 router.get('/get-all-bill', warehouseController.getAllBillController);
-
-
+router.put('/update-bill', warehouseController.updateBillController);
 module.exports = router;
