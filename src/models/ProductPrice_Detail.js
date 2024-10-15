@@ -12,10 +12,6 @@ const productPriceDetailSchema = new mongoose.Schema({
     ref: 'Product',
     required: true
   },
-  productPriceDetail_id: {
-    type: Number,
-    required: true
-  },
   price: {
     type: Number,
     required: true

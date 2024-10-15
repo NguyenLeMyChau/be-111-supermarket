@@ -2,12 +2,19 @@ const express = require('express');
 const cors = require("cors");
 const dotenv = require('dotenv');
 const PORT = process.env.PORT || 5000;
+const bodyParser = require('body-parser')
 
 const connectDB = require('./src/config/configMongoDB');
+
+
 
 // Load environment variables from .env file into process.env 
 dotenv.config();
 const app = express();
+
+// Tăng giới hạn cho payload JSON và URL-encoded
+app.use(bodyParser.json({ limit: '2mb' })); // Đối với payload JSON
+app.use(bodyParser.urlencoded({ limit: '2mb', extended: true })); // Đối với payload URL-encode
 
 app.use(express.json());
 app.use(cors({
