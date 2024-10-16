@@ -18,4 +18,6 @@ router.post('/add-product', productController.addProductWithWarehouseController)
 
 router.put('/update-product/:productId', productController.updateProductController);
 
+router.get('/get-products-with-price-and-promotion', productController.getProductsWithPriceAndPromotion);
+
 module.exports = router;

@@ -3,6 +3,8 @@ const Category = require('../models/Category');
 const Product = require('../models/Product');
 const Warehouse = require('../models/Warehouse');
 const TransactionInventory = require('../models/TransactionInventory');
+const PromotionHeader  = require('../models/ProductPrice_Header');
+
 
 async function getAllCategory() {
     try {
@@ -201,6 +203,72 @@ const updateProduct = async (productId, productData) => {
 };
 
 
+async function getAllProductsWithPriceAndPromotion() {
+    try {
+        const productPrices = await Product.find().populate('product_id');
+
+        // Lấy tất cả khuyến mãi đang hoạt động
+        const activePromotions = await PromotionHeader.find({ isActive: true })
+            .populate({
+                path: 'promotionLines',
+                match: { isActive: true },
+                populate: {
+                    path: 'PromotionDetail',
+                    populate: {
+                        path: 'product_id product_donate',
+                    },
+                },
+            });
+
+        // Kết hợp thông tin giá và khuyến mãi
+        const productsWithPromotion = productPrices.map(priceDetail => {
+            const product = priceDetail.product_id;
+            let promotions = [];
+
+            // Tìm các khuyến mãi áp dụng cho sản phẩm hiện tại
+            activePromotions.forEach(promoHeader => {
+                promoHeader.promotionLines.forEach(promoLine => {
+                    promoLine.PromotionDetail.forEach(promoDetail => {
+                        if (promoDetail.product_id && promoDetail.product_id.equals(product._id)) {
+                            promotions.push({
+                                header: promoHeader.description,
+                                line: promoLine.description,
+                                type: promoLine.type,
+                                startDate: promoLine.startDate,
+                                endDate: promoLine.endDate,
+                                percent: promoDetail.percent,
+                                amount_sales: promoDetail.amount_sales,
+                                product_donate: promoDetail.product_donate,
+                                quantity_donate: promoDetail.quantity_donate,
+                            });
+                        }
+                    });
+                });
+            });
+
+            return {
+                product: {
+                    name: product.name,
+                    barcode: product.barcode,
+                    category_id: product.category_id,
+                    unit_id: product.unit_id,
+                    // Các thuộc tính khác của sản phẩm nếu cần
+                },
+                price: priceDetail.price,
+                promotions: promotions,
+            };
+        });
+
+        return productsWithPromotion;
+    } catch (err) {
+        throw new Error(`Error getting products with price and promotions: ${err.message}`);
+    }
+}
+
+module.exports = {
+    getAllProductsWithPriceAndPromotion,
+};
+
 module.exports = {
     getAllCategory,
     addCategory,
@@ -210,4 +278,5 @@ module.exports = {
     getProductsDetail,
     addProductWithWarehouse,
     updateProduct,
+    getAllProductsWithPriceAndPromotion
 };
