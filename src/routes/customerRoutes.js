@@ -10,4 +10,6 @@ router.post('/pay-cart', customerController.payCartController);
 
 router.post('/update-cart', customerController.updateCartController);
 
+router.post('/remove-product-cart', customerController.removeProductCartController);
+
 module.exports = router;

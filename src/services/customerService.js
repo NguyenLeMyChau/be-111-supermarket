@@ -153,11 +153,29 @@ async function payCart(customerId, products, staffId) {
     }
 }
 
+const removeProductCart = async (accountId, productId) => {
+    try {
+        // Tìm giỏ hàng của người dùng
+        let cart = await Cart.findOne({ account_id: accountId });
+
+        // Xóa sản phẩm trong giỏ hàng
+        cart.products = cart.products.filter(p => p.product_id.toString() !== productId);
+
+        // Lưu lại giỏ hàng đã được cập nhật
+        await cart.save();
+
+        return { success: true, message: 'Product removed from cart' };
+    }
+    catch (error) {
+        return { success: false, message: error.message };
+    }
+}
 
 module.exports = {
     getCartById,
     addProductToCart,
     payCart,
     updateCart,
+    removeProductCart
 }
 

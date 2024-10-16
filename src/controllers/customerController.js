@@ -1,4 +1,4 @@
-const { addProductToCart, getCartById, payCart, updateCart } = require("../services/customerService");
+const { addProductToCart, getCartById, payCart, updateCart, removeProductCart } = require("../services/customerService");
 
 
 async function getCartByIdController(req, res) {
@@ -45,9 +45,21 @@ async function updateCartController(req, res) {
     }
 }
 
+async function removeProductCartController(req, res) {
+    try {
+        const { accountId, productId } = req.body;
+        const cart = await removeProductCart(accountId, productId);
+        res.status(200).json(cart);
+    } catch (error) {
+        console.error(`Error remove product from cart: ${error.message}`);
+        res.status(400).json({ message: error.message });
+    }
+}
+
 module.exports = {
     getCartByIdController,
     addProductToCartController,
     payCartController,
-    updateCartController
+    updateCartController,
+    removeProductCartController
 };
