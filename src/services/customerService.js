@@ -59,6 +59,24 @@ async function addProductToCart(accountId, productId, quantity, price) {
     }
 }
 
+async function updateCart(accountId, productList) {
+    try {
+        // Tìm giỏ hàng của người dùng
+        let cart = await Cart.findOne({ account_id: accountId });
+
+        // Cập nhật giỏ hàng
+        cart.products = productList;
+
+        // Lưu giỏ hàng
+        await cart.save();
+
+        return cart;
+
+    } catch (err) {
+        throw new Error(`Error updating cart: ${err.message}`);
+    }
+}
+
 async function removeAllProductInCart(accountId) {
     try {
         // Tìm giỏ hàng của người dùng
@@ -139,6 +157,7 @@ async function payCart(customerId, products, staffId) {
 module.exports = {
     getCartById,
     addProductToCart,
-    payCart
+    payCart,
+    updateCart,
 }
 

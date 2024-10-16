@@ -8,4 +8,6 @@ router.post('/add-product-to-cart', customerController.addProductToCartControlle
 
 router.post('/pay-cart', customerController.payCartController);
 
+router.post('/update-cart', customerController.updateCartController);
+
 module.exports = router;
