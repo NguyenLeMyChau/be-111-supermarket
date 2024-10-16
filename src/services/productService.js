@@ -253,10 +253,11 @@ async function getAllProductsWithPriceAndPromotion() {
                     barcode: product.barcode,
                     category_id: product.category_id,
                     unit_id: product.unit_id,
-                    // Các thuộc tính khác của sản phẩm nếu cần
+                    img:product.img,
+                    price: priceDetail.price,
+                    promotions: promotions,
                 },
-                price: priceDetail.price,
-                promotions: promotions,
+              
             };
         });
 
@@ -266,9 +267,6 @@ async function getAllProductsWithPriceAndPromotion() {
     }
 }
 
-module.exports = {
-    getAllProductsWithPriceAndPromotion,
-};
 
 module.exports = {
     getAllCategory,
