@@ -4,6 +4,7 @@ const Product = require('../models/Product');
 const Warehouse = require('../models/Warehouse');
 const TransactionInventory = require('../models/TransactionInventory');
 const PromotionHeader  = require('../models/ProductPrice_Header');
+const ProductPriceDetail = require('../models/ProductPrice_Detail');
 
 
 async function getAllCategory() {
@@ -205,8 +206,8 @@ const updateProduct = async (productId, productData) => {
 
 async function getAllProductsWithPriceAndPromotion() {
     try {
-        const productPrices = await Product.find().populate('product_id');
-
+        const productPrices = await ProductPriceDetail.find().populate('product_id');
+        console.log("1")
         // Lấy tất cả khuyến mãi đang hoạt động
         const activePromotions = await PromotionHeader.find({ isActive: true })
             .populate({
