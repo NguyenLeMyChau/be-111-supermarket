@@ -4,7 +4,7 @@ const AutoIncrement = require('mongoose-sequence')(mongoose);
 const productPriceDetailSchema = new mongoose.Schema({
   productPriceHeader_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'productPriceHeader',
+    ref: 'productPrice_header',
     required: true
   },
   product_id: {
