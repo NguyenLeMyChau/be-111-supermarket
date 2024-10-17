@@ -21,7 +21,7 @@ app.use(cors({
   origin: '*'
 }));
 
- // Kết nối tới MongoDB
+// Kết nối tới MongoDB
 connectDB();
 
 const authMiddleware = require('./src/middlewares/authMiddleware');
@@ -35,7 +35,8 @@ const customerRoutes = require('./src/routes/customerRoutes');
 const userRoutes = require('./src/routes/userRoutes');
 const unitRoutes = require('./src/routes/unitRoutes');
 const uploadRoutes = require('./src/routes/uploadRoutes');
-const priceRoutes = require('./src/routes/priceRoutes')
+const priceRoutes = require('./src/routes/priceRoutes');
+const invoiceRoutes = require('./src/routes/invoiceRoutes');
 
 // ROUTES Manager
 app.use('/api/auth', authRoutes);
@@ -46,6 +47,7 @@ app.use('/api/promotion', authMiddleware(['manager']), promotionRoutes);
 app.use('/api/warehouse', authMiddleware(['manager']), warehouseRoutes);
 app.use('/api/unit', authMiddleware(['manager']), unitRoutes);
 app.use('/api/price', authMiddleware(['manager']), priceRoutes);
+app.use('/api/invoice', authMiddleware(['manager']), invoiceRoutes);
 
 // ROUTES Customer
 app.use('/api/customer', authMiddleware(['customer']), customerRoutes);
