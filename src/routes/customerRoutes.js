@@ -12,4 +12,6 @@ router.post('/update-cart', customerController.updateCartController);
 
 router.post('/remove-product-cart', customerController.removeProductCartController);
 
+router.post('/update-product-cart', customerController.updateProductCartController);
+
 module.exports = router;

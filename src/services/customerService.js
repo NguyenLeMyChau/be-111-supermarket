@@ -171,11 +171,34 @@ const removeProductCart = async (accountId, productId) => {
     }
 }
 
+const updateProductCart = async (accountId, productId, quantity) => {
+    try {
+        // Tìm giỏ hàng của người dùng
+        let cart = await Cart.findOne({ account_id: accountId });
+
+        // Cập nhật số lượng sản phẩm trong giỏ hàng
+        const productIndex = cart.products.findIndex(p => p.product_id.toString() === productId);
+
+        if (productIndex > -1) {
+            cart.products[productIndex].quantity = quantity;
+        }
+
+        // Lưu lại giỏ hàng đã được cập nhật
+        await cart.save();
+
+        return { success: true, message: 'Product updated in cart' };
+
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+}
+
 module.exports = {
     getCartById,
     addProductToCart,
     payCart,
     updateCart,
-    removeProductCart
+    removeProductCart,
+    updateProductCart
 }
 
