@@ -8,6 +8,7 @@ router.post('/addPriceHeader', priceController.addProductPrice);
 router.put('/updatePriceHeader/:priceId', priceController.updateProductPrice);
 router.post('/addPriceDetail', priceController.addProductPriceDetail);
 router.put('/updatePriceDetail/:priceDetailid', priceController.updateProductPriceDetail);
+router.get('/getProductNoPrice',priceController.getProductsWithoutPrice);
 
 
 module.exports = router;

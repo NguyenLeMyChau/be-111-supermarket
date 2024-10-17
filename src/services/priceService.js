@@ -178,10 +178,32 @@ const updatePriceDetail = async (priceDetailid, updateData) => {
     throw new Error('Error updating product price detail: ' + error.message);
   }
 };
+async function getProductsWithoutPriceAndActivePromotion(productPriceHeader_id) {
+  try {
+    // Bước 1: Tìm các product_id có liên kết với productPriceHeader_id trong productPrice_detail
+    const productsWithPrice = await ProductPriceDetail.find({ productPriceHeader_id })
+      .select('product_id'); // Chỉ chọn product_id để sử dụng sau này
+
+    const productIdsWithPrice = productsWithPrice.map(detail => detail.product_id.toString()); // Chuyển đổi ObjectId thành string để so sánh
+
+    // Bước 2: Lọc các sản phẩm không có trong productPrice_detail
+    const productsWithoutPrice = await Product.find({
+      _id: { $nin: productIdsWithPrice } // Lọc những sản phẩm không có trong danh sách đã tìm
+    });
+
+    return productsWithoutPrice;
+  } catch (error) {
+    console.error('Lỗi khi lấy sản phẩm không có giá:', error);
+    throw error;
+  }
+}
+
+
 module.exports = {
   getAllProductPrices,
   addProductPrice,
   updateProductPrice,
   addProductPriceDetail,
   updatePriceDetail,
+  getProductsWithoutPriceAndActivePromotion
 };

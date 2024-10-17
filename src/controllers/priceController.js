@@ -83,10 +83,24 @@ const updateProductPriceDetail = async (req, res) => {
     res.status(500).json({ message: 'Failed to update product price detail.' });
   }
 };
+
+
+async function getProductsWithoutPrice(req, res) {
+  const { productPriceHeader_id } = req.query;
+    try {
+      console.log(productPriceHeader_id)
+        const products = await priceService.getProductsWithoutPriceAndActivePromotion(productPriceHeader_id);
+        res.status(200).json(products);
+    } catch (error) {
+        console.error(`Lỗi khi lấy sản phẩm không có giá: ${error.message}`);
+        res.status(400).json({ message: error.message });
+    }
+}
 module.exports = {
     getAllProductPrice,
     addProductPrice,
     updateProductPrice,
     addProductPriceDetail,
     updateProductPriceDetail,
+    getProductsWithoutPrice
 };
