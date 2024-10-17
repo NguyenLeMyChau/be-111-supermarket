@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Account = require('../models/Account');
 const Cart = require('../models/Cart');
 const Product = require('../models/Product');
+const Customer = require('../models/Customer');
 const TransactionInventory = require('../models/TransactionInventory');
 const InvoiceSaleHeader = require('../models/InvoiceSale_Header');
 const InvoiceSaleDetail = require('../models/InvoiceSale_Detail');
@@ -193,12 +194,35 @@ const updateProductCart = async (accountId, productId, quantity) => {
     }
 }
 
+const updateCustomerInfo = async (accountId, userData) => {
+    try {
+        const account = await Account.findById(accountId);
+        if (!account) {
+            throw new Error('Account not found');
+        }
+
+        // Cập nhật thông tin người dùng, không bao gồm trường phone
+        const { phone, ...userDataToUpdate } = userData; // Loại bỏ phone ra khỏi userData
+        const userUpdated = await Customer.findOneAndUpdate(
+            { account_id: accountId },
+            { $set: userDataToUpdate },  // Cập nhật thông tin khác
+            { new: true }
+        );
+
+        return userUpdated;
+    } catch (error) {
+        throw new Error('Error updating user: ' + error.message);
+    }
+}
+
+
 module.exports = {
     getCartById,
     addProductToCart,
     payCart,
     updateCart,
     removeProductCart,
-    updateProductCart
+    updateProductCart,
+    updateCustomerInfo
 }
 

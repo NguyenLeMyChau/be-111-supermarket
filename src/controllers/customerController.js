@@ -1,4 +1,4 @@
-const { addProductToCart, getCartById, payCart, updateCart, removeProductCart, updateProductCart } = require("../services/customerService");
+const { addProductToCart, getCartById, payCart, updateCart, removeProductCart, updateProductCart, updateCustomerInfo } = require("../services/customerService");
 
 
 async function getCartByIdController(req, res) {
@@ -67,11 +67,24 @@ async function updateProductCartController(req, res) {
     }
 }
 
+async function updateCustomerInfoController(req, res) {
+    try {
+        const accountId = req.params.accountId;
+        const { customerInfo } = req.body;
+        const customer = await updateCustomerInfo(accountId, customerInfo);
+        res.status(200).json(customer);
+    } catch (error) {
+        console.error(`Error update customer info: ${error.message}`);
+        res.status(400).json({ message: error.message });
+    }
+}
+
 module.exports = {
     getCartByIdController,
     addProductToCartController,
     payCartController,
     updateCartController,
     removeProductCartController,
-    updateProductCartController
+    updateProductCartController,
+    updateCustomerInfoController
 };

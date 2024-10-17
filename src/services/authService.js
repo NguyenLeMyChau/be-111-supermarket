@@ -24,7 +24,7 @@ async function registerAccount(accountData) {
             throw new Error('Invalid role');
         }
 
-        const existingAccount = await Account.findOne({ phone }).session(session);
+        const existingAccount = await Account.findOne({ phone, role }).session(session);
         if (existingAccount) {
             throw new Error('Tài khoản đã tồn tại');
         }
@@ -135,8 +135,9 @@ async function loginAccount({ phone, password }) {
                 address: user.address,
                 phone: user.phone,
                 email: user.email,
-                gender: user.gender
-            }
+                gender: user.gender,
+                loyaltyPoints: user.loyaltyPoints
+            },
         };
 
         // Ký JWT token với thời hạn 1 giờ

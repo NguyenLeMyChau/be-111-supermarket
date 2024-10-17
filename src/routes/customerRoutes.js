@@ -14,4 +14,6 @@ router.post('/remove-product-cart', customerController.removeProductCartControll
 
 router.post('/update-product-cart', customerController.updateProductCartController);
 
+router.put('/update-customer/:accountId', customerController.updateCustomerInfoController);
+
 module.exports = router;
