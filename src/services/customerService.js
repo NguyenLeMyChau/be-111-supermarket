@@ -6,6 +6,8 @@ const Customer = require('../models/Customer');
 const TransactionInventory = require('../models/TransactionInventory');
 const InvoiceSaleHeader = require('../models/InvoiceSale_Header');
 const InvoiceSaleDetail = require('../models/InvoiceSale_Detail');
+const Unit = require('../models/Unit');
+
 
 async function getCartById(accountId) {
     try {
@@ -215,6 +217,43 @@ const updateCustomerInfo = async (accountId, userData) => {
     }
 }
 
+const getInvoicesByAccountId = async (accountId) => {
+    try {
+        // Tìm tất cả các hóa đơn của tài khoản
+        const invoicesHeader = await InvoiceSaleHeader.find({ customer_id: accountId });
+
+        // Lấy chi tiết hóa đơn và thông tin sản phẩm cho mỗi hóa đơn
+        const invoices = await Promise.all(invoicesHeader.map(async (header) => {
+            const details = await InvoiceSaleDetail.find({ invoiceSaleHeader_id: header._id });
+            const customer = await Customer.findOne({ account_id: header.customer_id }).select('name');
+
+            // Lấy thông tin sản phẩm cho mỗi chi tiết hóa đơn
+            const detailsWithProductInfo = await Promise.all(details.map(async (detail) => {
+                const product = await Product.findById(detail.product_id).select('name img');
+                return {
+                    ...detail.toObject(),
+                    productName: product ? product.name : 'Unknown',
+                    productImg: product ? product.img : null
+                };
+            }));
+
+            // Tính tổng số tiền từ các chi tiết hóa đơn
+            const total = detailsWithProductInfo.reduce((sum, detail) => sum + (detail.price * detail.quantity), 0);
+
+            return {
+                ...header.toObject(),
+                customerName: customer ? customer.name : 'Unknown',
+                details: detailsWithProductInfo,
+                total
+            };
+        }));
+
+        return invoices;
+    } catch (error) {
+        throw new Error('Error getting invoices: ' + error.message);
+    }
+};
+
 
 module.exports = {
     getCartById,
@@ -223,6 +262,7 @@ module.exports = {
     updateCart,
     removeProductCart,
     updateProductCart,
-    updateCustomerInfo
+    updateCustomerInfo,
+    getInvoicesByAccountId
 }
 

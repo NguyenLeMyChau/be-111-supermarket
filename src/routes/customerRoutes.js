@@ -16,4 +16,6 @@ router.post('/update-product-cart', customerController.updateProductCartControll
 
 router.put('/update-customer/:accountId', customerController.updateCustomerInfoController);
 
+router.get('/get-invoice/:accountId', customerController.getInvoicesByAccountIdController);
+
 module.exports = router;
