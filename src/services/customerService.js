@@ -5,6 +5,7 @@ const Product = require('../models/Product');
 const TransactionInventory = require('../models/TransactionInventory');
 const InvoiceSaleHeader = require('../models/InvoiceSale_Header');
 const InvoiceSaleDetail = require('../models/InvoiceSale_Detail');
+const Unit = require('../models/Unit');
 
 async function getCartById(accountId) {
     try {
@@ -13,13 +14,18 @@ async function getCartById(accountId) {
 
         // Lấy thông tin sản phẩm từ product_id
         const productsWithDetails = await Promise.all(products.map(async (product) => {
-            const productInfo = await Product.findById(product.product_id).select('name img').lean();
+            const productInfo = await Product.findById(product.product_id).select('name img unit_id').lean();
+
+            const unitInfo = productInfo ? await Unit.findById(productInfo.unit_id).lean() : null;
+
             return {
                 product_id: product.product_id,
                 name: productInfo ? productInfo.name : null,
                 img: productInfo ? productInfo.img : null,
                 quantity: product.quantity,
-                price: product.price
+                price: product.price,
+                unit:unitInfo,
+                total:product.total,
             };
         }));
         return productsWithDetails;
@@ -45,9 +51,10 @@ async function addProductToCart(accountId, productId, quantity, price) {
             // Nếu sản phẩm đã tồn tại, cập nhật số lượng sản phẩm và giá
             cart.products[productIndex].quantity += quantity;
             cart.products[productIndex].price = price;
+            cart.products[productIndex].total = price*quantity;
         } else {
             // Nếu sản phẩm chưa tồn tại, thêm sản phẩm mới vào giỏ hàng
-            cart.products.push({ product_id: productId, quantity: quantity, price: price });
+            cart.products.push({ product_id: productId, quantity: quantity, price: price ,total:quantity*price});
         }
 
         // Lưu giỏ hàng

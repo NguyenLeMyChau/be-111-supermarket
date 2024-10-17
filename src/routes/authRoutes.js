@@ -3,6 +3,7 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const productController = require('../controllers/productController');
 const authMiddleware = require('../middlewares/authMiddleware');
+const promotionController = require('../controllers/promotionController');
 
 // Đăng ký nhân viên
 router.post('/register-employee', authMiddleware(['manager']), authController.register);
@@ -24,5 +25,9 @@ router.get('/accounts', authMiddleware(['manager']), authController.getAccounts)
 
 // Lấy thông tin hàng hoá cho customer
 router.get('/get-categories', productController.getCategories);
+
+router.get('/get-products-with-price-and-promotion', productController.getProductsWithPriceAndPromotion);
+
+router.post('/get-promotion-by-product',promotionController.getPromotionsByProductIdsController);
 
 module.exports = router;
