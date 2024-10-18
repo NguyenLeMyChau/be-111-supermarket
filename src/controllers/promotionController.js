@@ -138,6 +138,24 @@ const getPromotionsByProductIdsController = async (req, res) => {
       return res.status(500).json({ message: 'Có lỗi xảy ra khi lấy thông tin khuyến mãi.' });
     }
   };
+
+  const getPromotionsByVoucher = async (req, res) => {
+    try {
+      // Lấy danh sách productIds từ body của request
+      const { voucher } = req.body;
+      
+  
+      // Gọi service để lấy thông tin khuyến mãi
+      const promotions = await promotionService.getPromotionByVoucher(voucher);
+  
+      // Trả về danh sách khuyến mãi
+      return res.status(200).json(promotions);
+    } catch (error) {
+      console.error('Lỗi khi lấy thông tin khuyến mãi:', error);
+      // Trả về lỗi 500 nếu có lỗi từ server
+      return res.status(500).json({ message: 'Có lỗi xảy ra khi lấy thông tin khuyến mãi.' });
+    }
+  };
 module.exports = {
     getPromotions,
     addPromotionHeader,
@@ -147,5 +165,6 @@ module.exports = {
     updatePromotionHeader,
     updatePromotionLine,
     updatePromotionDetail,
-    getPromotionsByProductIdsController
+    getPromotionsByProductIdsController,
+    getPromotionsByVoucher
 };

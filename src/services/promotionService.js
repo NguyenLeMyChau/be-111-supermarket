@@ -179,7 +179,35 @@ const getPromotionByProductId = async (productId) => {
     }
   };
   
-  
+  const getPromotionByVoucher = async (voucher) => {
+    try {
+        // Tìm chi tiết khuyến mãi theo mã voucher, với điều kiện PromotionLine và PromotionHeader isActive === true
+        const promotions = await PromotionDetail.find({ voucher: voucher }) // Tìm các khuyến mãi có mã voucher khớp
+            .populate({
+                path: 'promotionLine_id',
+                match: { isActive: true }, // Điều kiện isActive === true cho PromotionLine
+                select: 'description startDate endDate isActive type',
+                populate: {
+                    path: 'promotionHeader_id',
+                    match: { isActive: true }, // Điều kiện isActive === true cho PromotionHeader
+                    select: 'description startDate endDate isActive',
+                },
+            })
+            .exec();
+
+        // Lọc ra các khuyến mãi hợp lệ, nơi PromotionLine và PromotionHeader không bị null (đảm bảo isActive === true)
+        const validPromotions = promotions.filter(promotion =>
+            promotion.promotionLine_id && promotion.promotionLine_id.promotionHeader_id
+        );
+
+        // Trả về các khuyến mãi hợp lệ
+        console.log(validPromotions);
+        return validPromotions;
+    } catch (error) {
+        console.error('Lỗi khi lấy thông tin khuyến mãi theo voucher:', error);
+        throw error;
+    }
+}; 
 
 module.exports = {
     getAllPromotion,
@@ -190,6 +218,7 @@ module.exports = {
     updatePromotionHeader,
     updatePromotionLine, 
     updatePromotionDetail,
-    getPromotionByProductId
+    getPromotionByProductId,
+    getPromotionByVoucher,
 };
 
