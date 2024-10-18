@@ -28,8 +28,8 @@ async function getCartById(accountId) {
                 img: productInfo ? productInfo.img : null,
                 quantity: product.quantity,
                 price: product.price,
-                unit:unitInfo,
-                total:product.total,
+                unit: unitInfo,
+                total: product.total,
             };
         }));
         return productsWithDetails;
@@ -55,10 +55,10 @@ async function addProductToCart(accountId, productId, quantity, price) {
             // Nếu sản phẩm đã tồn tại, cập nhật số lượng sản phẩm và giá
             cart.products[productIndex].quantity += quantity;
             cart.products[productIndex].price = price;
-            cart.products[productIndex].total = price*quantity;
+            cart.products[productIndex].total = price * quantity;
         } else {
             // Nếu sản phẩm chưa tồn tại, thêm sản phẩm mới vào giỏ hàng
-            cart.products.push({ product_id: productId, quantity: quantity, price: price ,total:quantity*price});
+            cart.products.push({ product_id: productId, quantity: quantity, price: price, total: quantity * price });
         }
 
         // Lưu giỏ hàng
@@ -105,7 +105,7 @@ async function removeAllProductInCart(accountId) {
     }
 }
 
-async function payCart(customerId, products, paymentMethod,paymentInfo,promoCode,paymentAmount) {
+async function payCart(customerId, products, paymentMethod, paymentInfo, promoCode, paymentAmount) {
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -122,10 +122,10 @@ async function payCart(customerId, products, paymentMethod,paymentInfo,promoCode
 
         const invoiceSaleHeader = new InvoiceSaleHeader({
             customer_id: customerId,
-            paymentInfo : paymentInfo,
-            paymentMethod:paymentMethod,
-            paymentAmount:paymentAmount,
-            voucher:promoCode?promoCode:null,
+            paymentInfo: paymentInfo,
+            paymentMethod: paymentMethod,
+            paymentAmount: paymentAmount,
+            voucher: promoCode ? promoCode : null,
         });
         await invoiceSaleHeader.save({ session });
 
@@ -151,10 +151,10 @@ async function payCart(customerId, products, paymentMethod,paymentInfo,promoCode
             invoiceSaleHeader_id: invoiceSaleHeader._id,
             products: invoiceSaleDetails,
         });
-        
+
         await newInvoiceSaleDetail.save({ session });
 
-            for (const item of products) {
+        for (const item of products) {
             const transactionInventory = new TransactionInventory({
                 product_id: item.product_id,
                 quantity: item.quantity,
@@ -269,27 +269,28 @@ const getInvoicesByAccountId = async (accountId) => {
 
         // Lấy chi tiết hóa đơn và thông tin sản phẩm cho mỗi hóa đơn
         const invoices = await Promise.all(invoicesHeader.map(async (header) => {
-            const details = await InvoiceSaleDetail.find({ invoiceSaleHeader_id: header._id });
-            const customer = await Customer.findOne({ account_id: header.customer_id }).select('name');
+            // Tìm chi tiết của hóa đơn (là một object, không phải mảng)
+            const detail = await InvoiceSaleDetail.findOne({ invoiceSaleHeader_id: header._id }).lean();
+            const customer = await Customer.findOne({ account_id: header.customer_id }).select('name').lean();
 
-            // Lấy thông tin sản phẩm cho mỗi chi tiết hóa đơn
-            const detailsWithProductInfo = await Promise.all(details.map(async (detail) => {
-                const product = await Product.findById(detail.product_id).select('name img');
+            // Duyệt qua products bên trong detail
+            const productsWithInfo = await Promise.all(detail.products.map(async (item) => {
+                const product = await Product.findById(item.product).select('name img unit_id').lean();
+                const unit = await Unit.findById(product.unit_id).select('description').lean();
+
                 return {
-                    ...detail.toObject(),
+                    ...item,
                     productName: product ? product.name : 'Unknown',
-                    productImg: product ? product.img : null
+                    productImg: product ? product.img : null,
+                    unitName: unit ? unit.description : 'Unknown'
                 };
-            }));
+            }));;
 
-            // Tính tổng số tiền từ các chi tiết hóa đơn
-            const total = detailsWithProductInfo.reduce((sum, detail) => sum + (detail.price * detail.quantity), 0);
-
+            // Trả về thông tin hóa đơn cùng chi tiết và thông tin sản phẩm
             return {
                 ...header.toObject(),
                 customerName: customer ? customer.name : 'Unknown',
-                details: detailsWithProductInfo,
-                total
+                detail: productsWithInfo
             };
         }));
 
@@ -298,6 +299,9 @@ const getInvoicesByAccountId = async (accountId) => {
         throw new Error('Error getting invoices: ' + error.message);
     }
 };
+
+
+
 
 
 module.exports = {

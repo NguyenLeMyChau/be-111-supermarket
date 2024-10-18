@@ -6,26 +6,29 @@ const Unit = require('../models/Unit');
 
 const getAllInvoices = async () => {
     const invoicesHeader = await InvoiceSaleHeader.find();
-    const invoices = await Promise.all(invoicesHeader.map(async (header) => {
-        const details = await InvoiceSaleDetail.find({ invoiceSaleHeader_id: header._id });
-        const customer = await Customer.findOne({ account_id: header.customer_id }).select('name');
 
-        // Lấy thông tin sản phẩm cho mỗi chi tiết hóa đơn
-        const detailsWithProductInfo = await Promise.all(details.map(async (detail) => {
-            const product = await Product.findById(detail.product_id).select('name unit_id');
-            const unit = await Unit.findById(product.unit_id).select('description');
+    const invoices = await Promise.all(invoicesHeader.map(async (header) => {
+        const customer = await Customer.findOne({ account_id: header.customer_id }).select('name');
+        const detail = await InvoiceSaleDetail.findOne({ invoiceSaleHeader_id: header._id }).lean();
+
+        // Duyệt qua products bên trong detail
+        const productsWithInfo = await Promise.all(detail.products.map(async (item) => {
+            const product = await Product.findById(item.product).select('name img unit_id').lean();
+            const unit = await Unit.findById(product.unit_id).select('description').lean();
 
             return {
-                ...detail.toObject(),
+                ...item,
                 productName: product ? product.name : 'Unknown',
-                unit: unit ? unit.description : 'Unknown'
+                productImg: product ? product.img : null,
+                unitName: unit ? unit.description : 'Unknown'
             };
-        }));
+        }));;
+
 
         return {
             ...header.toObject(),
             customerName: customer ? customer.name : 'Unknown',
-            details: detailsWithProductInfo
+            details: productsWithInfo
         };
 
     }));
