@@ -10,15 +10,15 @@ const addressSchema = new mongoose.Schema({
 
 const invoiceSaleHeaderSchema = new mongoose.Schema({
     customer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'account', required: true },
-    paymentInfo:{
+    paymentInfo: {
         name: { type: String, required: true, trim: true },
         address: { type: addressSchema },
-        phone: { type: String, required: true, unique: true, trim: true },
-        gender: { type: Boolean, trim: true } 
+        phone: { type: String, required: true, trim: true },
+        gender: { type: Boolean, trim: true }
     },
     paymentMethod: { type: String, required: true },
     paymentAmount: { type: Number, required: true },
-    voucher : {type:String},
+    voucher: { type: String },
 }, { timestamps: true });
 
 invoiceSaleHeaderSchema.plugin(AutoIncrement, { inc_field: 'invoiceSaleHeader_index' });
