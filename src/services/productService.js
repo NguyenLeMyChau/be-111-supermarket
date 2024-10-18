@@ -225,17 +225,20 @@ const updateProduct = async (productId, productData) => {
 
 async function getAllProductsWithPriceAndPromotion() {
     try {
-      const productPrices = await ProductPriceDetail.find()
+      // Lọc ProductPriceDetail chỉ lấy những bản ghi có ProductPriceHeader đang hoạt động
+      const productPrices = await ProductPriceDetail.find({
+        productPriceHeader_id: { $ne: null }, // Bỏ qua các bản ghi không có liên kết ProductPriceHeader
+      })
         .populate({
-          path: "product_id", // Tham chiếu tới sản phẩm
+          path: "product_id",
           populate: [
             {
-              path: "unit_id", // Tham chiếu tới Unit
-              model: "unit", // Tên của model Unit
+              path: "unit_id",
+              model: "unit",
             },
             {
-              path: "category_id", // Tham chiếu tới Category
-              model: "category", // Tên của model Category
+              path: "category_id",
+              model: "category",
             },
           ],
         })
@@ -244,13 +247,17 @@ async function getAllProductsWithPriceAndPromotion() {
           match: { status: "active" }, // Chỉ lấy ProductPriceHeader có status là 'active'
         });
   
-      // Lấy tất cả khuyến mãi đang hoạt động
-      // Bước 1: Lấy tất cả PromotionHeader đang hoạt động
+      // Lọc ra các bản ghi hợp lệ (loại bỏ những bản ghi có productPriceHeader_id là null)
+      const filteredProductPrices = productPrices.filter(
+        (priceDetail) => priceDetail.productPriceHeader_id !== null
+      );
+  
+      // Lấy tất cả PromotionHeader đang hoạt động
       const activePromotionHeaders = await PromotionHeader.find({
         isActive: true,
       });
   
-      // Bước 2: Lấy tất cả PromotionLine có liên kết với các PromotionHeader đang hoạt động
+      // Lấy tất cả PromotionLine có liên kết với PromotionHeader đang hoạt động
       const activePromotionLines = await PromotionLine.find({
         promotionHeader_id: {
           $in: activePromotionHeaders.map((header) => header._id),
@@ -258,7 +265,7 @@ async function getAllProductsWithPriceAndPromotion() {
         isActive: true,
       });
   
-      // Bước 3: Lấy tất cả PromotionDetail dựa trên promotionLine_id
+      // Lấy tất cả PromotionDetail đang hoạt động dựa trên promotionLine_id
       const activePromotionDetails = await PromotionDetail.find({
         promotionLine_id: { $in: activePromotionLines.map((line) => line._id) },
       }).populate("product_id product_donate");
@@ -266,7 +273,7 @@ async function getAllProductsWithPriceAndPromotion() {
       // Khởi tạo đối tượng để phân loại sản phẩm theo danh mục
       const productsByCategory = {};
   
-      productPrices.forEach((priceDetail) => {
+      filteredProductPrices.forEach((priceDetail) => {
         const product = priceDetail.product_id;
         let promotions = [];
   
@@ -293,9 +300,9 @@ async function getAllProductsWithPriceAndPromotion() {
                       product_donate: promoDetail.product_donate,
                       quantity_donate: promoDetail.quantity_donate,
                       product_id: promoDetail.product_id,
-                      quantity:promoDetail.quantity,
-                      amount_donate:promoDetail.amount_donate,
-                      amount_limit:promoDetail.amount_limit,
+                      quantity: promoDetail.quantity,
+                      amount_donate: promoDetail.amount_donate,
+                      amount_limit: promoDetail.amount_limit,
                     });
                   }
                 });
@@ -303,21 +310,22 @@ async function getAllProductsWithPriceAndPromotion() {
         });
   
         // Lấy danh mục của sản phẩm
-        const categoryId = product.category_id._id.toString(); // Chuyển đổi thành string để sử dụng làm khóa
+        const categoryId = product.category_id._id.toString();
         const productData = {
-            _id:product._id,
+          _id: product._id,
           name: product.name,
           barcode: product.barcode,
-          unit_id: product.unit_id, // Đây là ID của đơn vị
+          unit_id: product.unit_id,
           img: product.img,
           price: priceDetail.price,
+          priceDetail: priceDetail,
           promotions: promotions,
         };
   
         // Nếu danh mục chưa có trong đối tượng, khởi tạo mảng
         if (!productsByCategory[categoryId]) {
           productsByCategory[categoryId] = {
-            category: product.category_id, // Thông tin danh mục
+            category: product.category_id,
             products: [],
           };
         }
@@ -325,11 +333,11 @@ async function getAllProductsWithPriceAndPromotion() {
         // Thêm sản phẩm vào danh mục tương ứng
         productsByCategory[categoryId].products.push(productData);
       });
-
+  
+      // Sắp xếp sản phẩm trong từng danh mục theo số lượng khuyến mãi giảm dần
       for (const category in productsByCategory) {
         productsByCategory[category].products.sort((a, b) => {
-          // So sánh số lượng khuyến mãi
-          return b.promotions.length - a.promotions.length; // Sắp xếp giảm dần theo số lượng khuyến mãi
+          return b.promotions.length - a.promotions.length;
         });
       }
   
@@ -340,6 +348,7 @@ async function getAllProductsWithPriceAndPromotion() {
       );
     }
   }
+  
   
   
 module.exports = {
