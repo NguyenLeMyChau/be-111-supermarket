@@ -7,7 +7,8 @@ const InvoiceSaleHeader = require('../models/InvoiceSale_Header');
 const InvoiceSaleDetail = require('../models/InvoiceSale_Detail');
 const Unit = require('../models/Unit');
 const Customer = require('../models/Customer');
-const promotionService = require('./promotionService')
+const promotionService = require('./promotionService');
+const Warehouse = require('../models/Warehouse');
 
 
 async function getCartById(accountId) {
@@ -164,6 +165,28 @@ async function payCart(customerId, products, paymentMethod,paymentInfo,promoCode
         }
 
         await removeAllProductInCart(customerId);
+
+        for (const product of products) {
+            const pro = await Product.findById(product.product_id).session(session);
+            const unit = await Unit.findById(pro.unit_id).session(session);
+            console.log(pro,unit) // Sử dụng session cho findById
+            const conversionFactor = unit.quantity || 1;
+
+            // Tìm warehouse bằng item_code, có session
+            const warehouse = await Warehouse.findOne({ item_code: pro.item_code }).session(session);
+
+            // Tính số lượng cần cập nhật (quantity * conversionFactor)
+            const quantityToAdd = product.quantity * conversionFactor;
+
+            console.log('Số lượng cập nhật:', quantityToAdd);
+
+            // Cập nhật số lượng trong kho
+            console.log(`Trước cập nhật của ${warehouse.item_code}: ${warehouse.stock_quantity}`);
+            warehouse.stock_quantity -= quantityToAdd;
+            console.log(`Sau cập nhật của ${warehouse.item_code}: ${warehouse.stock_quantity}`);
+
+            await warehouse.save({ session });
+        }
 
         // Commit transaction
         await session.commitTransaction();
