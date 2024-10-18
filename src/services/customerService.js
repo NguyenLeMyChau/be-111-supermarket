@@ -7,6 +7,7 @@ const InvoiceSaleHeader = require('../models/InvoiceSale_Header');
 const InvoiceSaleDetail = require('../models/InvoiceSale_Detail');
 const Unit = require('../models/Unit');
 const Customer = require('../models/Customer');
+const promotionService = require('./promotionService')
 
 
 async function getCartById(accountId) {
@@ -103,44 +104,60 @@ async function removeAllProductInCart(accountId) {
     }
 }
 
-async function payCart(customerId, products, staffId) {
+async function payCart(customerId, products, paymentMethod,paymentInfo,promoCode,paymentAmount) {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
         // Tính tổng giá trị của giỏ hàng
-        let totalAmount = 0;
-        for (const item of products) {
-            const product = await Product.findById(item.product_id).session(session);
-            if (!product) {
-                throw new Error(`Product with id ${item.product_id} not found`);
-            }
-            totalAmount += product.price * item.quantity;
-        }
+        // let totalAmount = amount;
+        // for (const item of products) {
+        //     const product = await Product.findById(item.product_id).session(session);
+        //     if (!product) {
+        //         throw new Error(`Product with id ${item.product_id} not found`);
+        //     }
+        //     totalAmount += product.price * item.quantity;
+        // }
 
         const invoiceSaleHeader = new InvoiceSaleHeader({
             customer_id: customerId,
-            staff_id: staffId ? staffId : null,
+            paymentInfo : paymentInfo,
+            paymentMethod:paymentMethod,
+            paymentAmount:paymentAmount,
+            voucher:promoCode?promoCode:null,
         });
         await invoiceSaleHeader.save({ session });
 
         // Cập nhật số lượng sản phẩm trong kho và lưu thông tin
-        for (const item of products) {
-            // Lưu thông tin InvoiceSale
-            const invoiceSaleDetail = new InvoiceSaleDetail({
-                invoiceSaleHeader_id: invoiceSaleHeader._id,
-                product_id: item.product_id,
-                quantity: item.quantity,
-                price: item.price
-            });
-            await invoiceSaleDetail.save({ session });
+        const invoiceSaleDetails = [];
 
-            // Lưu thông tin TransactionInventory
+        for (const product of products) {
+            // Lấy thông tin khuyến mãi cho từng sản phẩm
+            const promotions = await promotionService.getPromotionByProductId(product.product_id); // Thay đổi để lấy theo ID sản phẩm
+
+            const invoiceSaleDetail = {
+                product: product.product_id, // ID sản phẩm
+                quantity: product.quantity, // Số lượng
+                price: product.price, // ID giá sản phẩm
+                promotion: promotions.length > 0 ? promotions[0]._id : null // ID khuyến mãi nếu có
+            };
+
+            invoiceSaleDetails.push(invoiceSaleDetail);
+        }
+
+        // Lưu thông tin hóa đơn bán hàng chi tiết
+        const newInvoiceSaleDetail = new InvoiceSaleDetail({
+            invoiceSaleHeader_id: invoiceSaleHeader._id,
+            products: invoiceSaleDetails,
+        });
+        
+        await newInvoiceSaleDetail.save({ session });
+
+            for (const item of products) {
             const transactionInventory = new TransactionInventory({
                 product_id: item.product_id,
                 quantity: item.quantity,
                 type: 'Bán hàng',
-                status: true
             });
             await transactionInventory.save({ session });
 

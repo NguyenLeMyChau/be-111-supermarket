@@ -88,7 +88,6 @@ const updateProductPriceDetail = async (req, res) => {
 async function getProductsWithoutPrice(req, res) {
   const { productPriceHeader_id } = req.query;
     try {
-      console.log(productPriceHeader_id)
         const products = await priceService.getProductsWithoutPriceAndActivePromotion(productPriceHeader_id);
         res.status(200).json(products);
     } catch (error) {

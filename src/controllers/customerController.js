@@ -25,8 +25,18 @@ async function addProductToCartController(req, res) {
 
 async function payCartController(req, res) {
     try {
-        const { customerId, products } = req.body;
-        const cart = await payCart(customerId, products);
+        const { customerId,
+            products,
+            paymentMethod,
+            paymentInfo,
+            promoCode,
+            paymentAmount } = req.body;
+        const cart = await payCart(customerId,
+            products,
+            paymentMethod,
+            paymentInfo,
+            promoCode,
+            paymentAmount);
         res.status(200).json(cart);
     } catch (error) {
         console.error(`Error pay cart: ${error.message}`);

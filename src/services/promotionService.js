@@ -171,7 +171,6 @@ const getPromotionByProductId = async (productId) => {
       );
   
       // Trả về các khuyến mãi hợp lệ
-      console.log(validPromotions)
       return validPromotions;
     } catch (error) {
       console.error('Lỗi khi lấy thông tin khuyến mãi theo Product ID:', error);
@@ -201,7 +200,6 @@ const getPromotionByProductId = async (productId) => {
         );
 
         // Trả về các khuyến mãi hợp lệ
-        console.log(validPromotions);
         return validPromotions;
     } catch (error) {
         console.error('Lỗi khi lấy thông tin khuyến mãi theo voucher:', error);
