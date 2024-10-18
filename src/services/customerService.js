@@ -2,10 +2,12 @@ const mongoose = require('mongoose');
 const Account = require('../models/Account');
 const Cart = require('../models/Cart');
 const Product = require('../models/Product');
+const Customer = require('../models/Customer');
 const TransactionInventory = require('../models/TransactionInventory');
 const InvoiceSaleHeader = require('../models/InvoiceSale_Header');
 const InvoiceSaleDetail = require('../models/InvoiceSale_Detail');
 const Unit = require('../models/Unit');
+
 
 async function getCartById(accountId) {
     try {
@@ -14,18 +16,13 @@ async function getCartById(accountId) {
 
         // Lấy thông tin sản phẩm từ product_id
         const productsWithDetails = await Promise.all(products.map(async (product) => {
-            const productInfo = await Product.findById(product.product_id).select('name img unit_id').lean();
-
-            const unitInfo = productInfo ? await Unit.findById(productInfo.unit_id).lean() : null;
-
+            const productInfo = await Product.findById(product.product_id).select('name img').lean();
             return {
                 product_id: product.product_id,
                 name: productInfo ? productInfo.name : null,
                 img: productInfo ? productInfo.img : null,
                 quantity: product.quantity,
-                price: product.price,
-                unit:unitInfo,
-                total:product.total,
+                price: product.price
             };
         }));
         return productsWithDetails;
@@ -51,10 +48,9 @@ async function addProductToCart(accountId, productId, quantity, price) {
             // Nếu sản phẩm đã tồn tại, cập nhật số lượng sản phẩm và giá
             cart.products[productIndex].quantity += quantity;
             cart.products[productIndex].price = price;
-            cart.products[productIndex].total = price*quantity;
         } else {
             // Nếu sản phẩm chưa tồn tại, thêm sản phẩm mới vào giỏ hàng
-            cart.products.push({ product_id: productId, quantity: quantity, price: price ,total:quantity*price});
+            cart.products.push({ product_id: productId, quantity: quantity, price: price });
         }
 
         // Lưu giỏ hàng
@@ -178,11 +174,95 @@ const removeProductCart = async (accountId, productId) => {
     }
 }
 
+const updateProductCart = async (accountId, productId, quantity) => {
+    try {
+        // Tìm giỏ hàng của người dùng
+        let cart = await Cart.findOne({ account_id: accountId });
+
+        // Cập nhật số lượng sản phẩm trong giỏ hàng
+        const productIndex = cart.products.findIndex(p => p.product_id.toString() === productId);
+
+        if (productIndex > -1) {
+            cart.products[productIndex].quantity = quantity;
+        }
+
+        // Lưu lại giỏ hàng đã được cập nhật
+        await cart.save();
+
+        return { success: true, message: 'Product updated in cart' };
+
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+}
+
+const updateCustomerInfo = async (accountId, userData) => {
+    try {
+        const account = await Account.findById(accountId);
+        if (!account) {
+            throw new Error('Account not found');
+        }
+
+        // Cập nhật thông tin người dùng, không bao gồm trường phone
+        const { phone, ...userDataToUpdate } = userData; // Loại bỏ phone ra khỏi userData
+        const userUpdated = await Customer.findOneAndUpdate(
+            { account_id: accountId },
+            { $set: userDataToUpdate },  // Cập nhật thông tin khác
+            { new: true }
+        );
+
+        return userUpdated;
+    } catch (error) {
+        throw new Error('Error updating user: ' + error.message);
+    }
+}
+
+const getInvoicesByAccountId = async (accountId) => {
+    try {
+        // Tìm tất cả các hóa đơn của tài khoản
+        const invoicesHeader = await InvoiceSaleHeader.find({ customer_id: accountId });
+
+        // Lấy chi tiết hóa đơn và thông tin sản phẩm cho mỗi hóa đơn
+        const invoices = await Promise.all(invoicesHeader.map(async (header) => {
+            const details = await InvoiceSaleDetail.find({ invoiceSaleHeader_id: header._id });
+            const customer = await Customer.findOne({ account_id: header.customer_id }).select('name');
+
+            // Lấy thông tin sản phẩm cho mỗi chi tiết hóa đơn
+            const detailsWithProductInfo = await Promise.all(details.map(async (detail) => {
+                const product = await Product.findById(detail.product_id).select('name img');
+                return {
+                    ...detail.toObject(),
+                    productName: product ? product.name : 'Unknown',
+                    productImg: product ? product.img : null
+                };
+            }));
+
+            // Tính tổng số tiền từ các chi tiết hóa đơn
+            const total = detailsWithProductInfo.reduce((sum, detail) => sum + (detail.price * detail.quantity), 0);
+
+            return {
+                ...header.toObject(),
+                customerName: customer ? customer.name : 'Unknown',
+                details: detailsWithProductInfo,
+                total
+            };
+        }));
+
+        return invoices;
+    } catch (error) {
+        throw new Error('Error getting invoices: ' + error.message);
+    }
+};
+
+
 module.exports = {
     getCartById,
     addProductToCart,
     payCart,
     updateCart,
-    removeProductCart
+    removeProductCart,
+    updateProductCart,
+    updateCustomerInfo,
+    getInvoicesByAccountId
 }
 

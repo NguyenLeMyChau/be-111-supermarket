@@ -12,4 +12,10 @@ router.post('/update-cart', customerController.updateCartController);
 
 router.post('/remove-product-cart', customerController.removeProductCartController);
 
+router.post('/update-product-cart', customerController.updateProductCartController);
+
+router.put('/update-customer/:accountId', customerController.updateCustomerInfoController);
+
+router.get('/get-invoice/:accountId', customerController.getInvoicesByAccountIdController);
+
 module.exports = router;
