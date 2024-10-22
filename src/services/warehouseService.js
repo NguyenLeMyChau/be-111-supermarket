@@ -406,10 +406,12 @@ const updateBill = async (oldBillId, newBillId, productList) => {
 
     try {
 
-        // Bước 0: Kiểm tra xem newBillId đã tồn tại trong db hay chưa
-        const existingNewBill = await SupplierOrderHeader.findOne({ bill_id: newBillId }).session(session);
-        if (existingNewBill) {
-            throw new Error('Mã phiếu nhập này đã tồn tại.');
+        // Bước 0: Kiểm tra xem newBillId đã tồn tại trong db hay chưa, nếu oldBillId !== newBillId
+        if (oldBillId !== newBillId) {
+            const existingNewBill = await SupplierOrderHeader.findOne({ bill_id: newBillId }).session(session);
+            if (existingNewBill) {
+                throw new Error('Mã phiếu nhập này đã tồn tại.');
+            }
         }
 
         // Bước 1: Tìm và cập nhật SupplierOrderHeader bằng oldBillId
