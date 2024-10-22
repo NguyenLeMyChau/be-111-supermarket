@@ -275,20 +275,38 @@ const addBillWarehouse = async (supplierId, accountId, billId, productList) => {
 
         const savedOrderHeader = await supplierOrderHeader.save({ session });
 
+        // Khởi tạo mảng products để lưu tất cả sản phẩm
+        const productsToSave = [];
+
+        for (const product of productList) {
+            const productFind = await Product.findOne({ unit_id: product.unit_id, item_code: product.item_code }).lean();
+
+            if (!productFind) {
+                throw new Error(`Không tìm thấy sản phẩm cho unit_id: ${product.unit_id} và item_code: ${product.item_code}`);
+            }
+
+            // Đẩy từng sản phẩm vào mảng products
+            productsToSave.push({
+                product_id: productFind._id,
+                quantity: product.quantity,
+            });
+        }
+
+        // Tạo đối tượng SupplierOrderDetail với mảng products
         const supplierOrderDetail = new SupplierOrderDetail({
             supplierOrderHeader_id: savedOrderHeader._id,
-            products: productList.map(product => ({
-                product_id: product.product_id,
-                quantity: product.quantity,
-            })),
+            products: productsToSave,  // Đẩy toàn bộ mảng products vào đây
         });
 
-        const savedOrderDetail = await supplierOrderDetail.save({ session });
+        const savedOrderDetails = await supplierOrderDetail.save({ session });
+
 
         // Tạo và lưu TransactionInventory cho mỗi sản phẩm
         for (const product of productList) {
+            const productFind = await Product.findOne({ unit_id: product.unit_id, item_code: product.item_code }).lean();
+
             const transactionInventory = new TransactionInventory({
-                product_id: product.product_id,
+                product_id: productFind._id,
                 quantity: product.quantity,
                 type: 'Nhập hàng',
                 order_id: savedOrderHeader._id,
@@ -323,7 +341,7 @@ const addBillWarehouse = async (supplierId, accountId, billId, productList) => {
 
         return {
             orderHeader: savedOrderHeader,
-            orderDetail: savedOrderDetail
+            orderDetail: savedOrderDetails
         };
     } catch (error) {
         if (!transactionCommitted) {
