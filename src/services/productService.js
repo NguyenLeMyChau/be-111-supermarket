@@ -55,13 +55,12 @@ async function updateCategory(categoryId, categoryData) {
 
 async function getAllProduct() {
   try {
-    const products = await Product.find();
+    const products = await Product.find().sort({ category_id: 1, name: 1 });
     return products;
   } catch (err) {
     throw new Error(`Error getting all products: ${err.message}`);
   }
 }
-
 async function getProductsBySupplierId(supplierId) {
   try {
     const products = await Product.find({ supplier_id: supplierId });

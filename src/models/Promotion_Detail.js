@@ -4,7 +4,11 @@ const Schema = mongoose.Schema;
 
 // Định nghĩa schema cho Promotion_Detail
 const PromotionDetailSchema = new Schema({
- 
+  description: {
+    type: String,
+    required: true,
+    trim: true,
+  },
   promotionLine_id: {
     type: Schema.Types.ObjectId,
     ref: 'promotion_line', // Khóa ngoại liên kết với Promotion_Line
@@ -36,9 +40,6 @@ const PromotionDetailSchema = new Schema({
   amount_limit: {
     type: Number,
   },
-  voucher:{
-    type:String,
-  }
 }, {
   timestamps: true,
 });

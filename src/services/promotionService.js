@@ -15,8 +15,8 @@ async function getAllPromotion() {
                 const details = await PromotionDetail.find({ promotionLine_id: promotionLine._id });
 
                 const detailedPromotions = await Promise.all(details.map(async (detail) => {
-                    const product = await Product.findById(detail.product_id);
-                    const product_donate = await Product.findById(detail.product_donate);
+                    const product = await Product.findById(detail.product_id).populate('unit_id');
+                    const product_donate = await Product.findById(detail.product_donate).populate('unit_id');
 
                     return {
                         ...detail.toObject(),

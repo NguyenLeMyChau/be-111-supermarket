@@ -1,6 +1,7 @@
 const ProductPriceHeader = require("../models/ProductPrice_Header");
 const ProductPriceDetail = require("../models/ProductPrice_Detail");
 const Product = require("../models/Product");
+const Unit = require("../models/Unit");
 
 async function getAllProductPrices() {
   try {
@@ -11,10 +12,11 @@ async function getAllProductPrices() {
           productPriceHeader_id: header._id,
         });
 
-       
         const detailedProductPrices = await Promise.all(
           productPriceDetails.map(async (detail) => {
-            const product = await Product.findById(detail.product_id);
+            const product = await Product.findById(detail.product_id)
+              .populate('unit_id')
+              .populate('category_id');
             return {
               ...detail.toObject(),
               product: product ? product.toObject() : null,
@@ -27,12 +29,30 @@ async function getAllProductPrices() {
           productPrices: detailedProductPrices,
         };
       })
-    ); 
-       return productPricesWithDetails;
+    );
+
+    // Sắp xếp theo product.category_id và product.name
+    const sortedProductPrices = productPricesWithDetails.map((header) => ({
+      ...header,
+      productPrices: header.productPrices.sort((a, b) => {
+        // So sánh category_id
+        if (a.product?.category_id < b.product?.category_id) return -1;
+        if (a.product?.category_id > b.product?.category_id) return 1;
+
+        // Nếu category_id giống nhau, so sánh name
+        if (a.product?.name < b.product?.name) return -1;
+        if (a.product?.name > b.product?.name) return 1;
+
+        return 0;
+      }),
+    }));
+
+    return sortedProductPrices;
   } catch (err) {
     throw new Error(`Error fetching product prices: ${err.message}`);
   }
 }
+
 const addProductPrice = async (productPriceData) => {
   const { description, startDate, endDate, status } = productPriceData;
 
