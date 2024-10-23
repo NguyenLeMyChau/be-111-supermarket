@@ -28,7 +28,7 @@ router.get('/get-categories', productController.getCategories);
 
 router.get('/get-products-with-price-and-promotion', productController.getProductsWithPriceAndPromotion);
 
-router.get('/get-products-with-price-and-promotion-no-category', productController.getAllProductsWithPriceAndPromotionNoCategory);
+router.get('/get-products-with-price-and-promotion-no-category', productController.getAllProductsWithPriceAndPromotionNoCategoryController);
 
 router.post('/get-promotion-by-product',promotionController.getPromotionsByProductIdsController);
 

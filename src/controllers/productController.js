@@ -1,4 +1,4 @@
-const { getAllCategory, getAllProduct, getProductsBySupplierId, getProductsDetail, addCategory, updateCategory, addProductWithWarehouse, updateProduct, getAllProductsWithPriceAndPromotion } = require("../services/productService");
+const { getAllCategory, getAllProduct, getProductsBySupplierId, getProductsDetail, addCategory, updateCategory, addProductWithWarehouse, updateProduct, getAllProductsWithPriceAndPromotion, getAllProductsWithPriceAndPromotionNoCategory } = require("../services/productService");
 
 
 async function getCategories(req, res) {
@@ -98,7 +98,7 @@ async function getProductsWithPriceAndPromotion(req, res) {
     }
 }
 
-async function getAllProductsWithPriceAndPromotionNoCategory(req, res) {
+async function getAllProductsWithPriceAndPromotionNoCategoryController(req, res) {
     try {
         const products = await getAllProductsWithPriceAndPromotionNoCategory();
         res.status(200).json(products);
@@ -117,5 +117,5 @@ module.exports = {
     addProductWithWarehouseController,
     updateProductController,
     getProductsWithPriceAndPromotion,
-    getAllProductsWithPriceAndPromotionNoCategory
+    getAllProductsWithPriceAndPromotionNoCategoryController
 };
