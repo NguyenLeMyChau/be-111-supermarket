@@ -97,6 +97,16 @@ async function getProductsWithPriceAndPromotion(req, res) {
         res.status(400).json({ message: error.message });
     }
 }
+
+async function getAllProductsWithPriceAndPromotionNoCategory(req, res) {
+    try {
+        const products = await getAllProductsWithPriceAndPromotionNoCategory();
+        res.status(200).json(products);
+    } catch (error) {
+        console.error(`Error get products with price and promotions: ${error.message}`);
+        res.status(400).json({ message: error.message });
+    }
+}
 module.exports = {
     getCategories,
     addCategoryController,
@@ -106,5 +116,6 @@ module.exports = {
     getProductsDetailController,
     addProductWithWarehouseController,
     updateProductController,
-    getProductsWithPriceAndPromotion
+    getProductsWithPriceAndPromotion,
+    getAllProductsWithPriceAndPromotionNoCategory
 };

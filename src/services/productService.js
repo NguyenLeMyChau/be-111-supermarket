@@ -350,6 +350,113 @@ async function getAllProductsWithPriceAndPromotion() {
   }
 }
 
+async function getAllProductsWithPriceAndPromotionNoCategory() {
+  try {
+    // Filter ProductPriceDetail to only get records with active ProductPriceHeader
+    const productPrices = await ProductPriceDetail.find({
+      productPriceHeader_id: { $ne: null }, // Skip records without a linked ProductPriceHeader
+    })
+      .populate({
+        path: "product_id",
+        populate: [
+          {
+            path: "unit_id",
+            model: "unit",
+          },
+          {
+            path: "category_id",
+            model: "category",
+          },
+        ],
+      })
+      .populate({
+        path: "productPriceHeader_id",
+        match: { status: "active" }, // Only include active ProductPriceHeader
+      });
+
+    // Filter out invalid records (remove those with a null productPriceHeader_id)
+    const filteredProductPrices = productPrices.filter(
+      (priceDetail) => priceDetail.productPriceHeader_id !== null
+    );
+
+    // Get all active PromotionHeader
+    const activePromotionHeaders = await PromotionHeader.find({
+      isActive: true,
+    });
+
+    // Get all active PromotionLine linked to active PromotionHeader
+    const activePromotionLines = await PromotionLine.find({
+      promotionHeader_id: {
+        $in: activePromotionHeaders.map((header) => header._id),
+      },
+      isActive: true,
+    });
+
+    // Get all active PromotionDetail based on promotionLine_id
+    const activePromotionDetails = await PromotionDetail.find({
+      promotionLine_id: { $in: activePromotionLines.map((line) => line._id) },
+    }).populate("product_id product_donate");
+
+    // Create a list of products with their prices and promotions
+    const productsList = filteredProductPrices.map((priceDetail) => {
+      const product = priceDetail.product_id;
+      let promotions = [];
+
+      // Find promotions applicable to the current product
+      activePromotionHeaders.forEach((promoHeader) => {
+        activePromotionLines
+          .filter((line) => line.promotionHeader_id.equals(promoHeader._id))
+          .forEach((promoLine) => {
+            activePromotionDetails
+              .filter((detail) => detail.promotionLine_id.equals(promoLine._id))
+              .forEach((promoDetail) => {
+                if (
+                  promoDetail.product_id &&
+                  promoDetail.product_id.equals(product._id)
+                ) {
+                  promotions.push({
+                    header: promoHeader.description,
+                    line: promoLine.description,
+                    type: promoLine.type,
+                    startDate: promoLine.startDate,
+                    endDate: promoLine.endDate,
+                    percent: promoDetail.percent,
+                    amount_sales: promoDetail.amount_sales,
+                    product_donate: promoDetail.product_donate,
+                    quantity_donate: promoDetail.quantity_donate,
+                    product_id: promoDetail.product_id,
+                    quantity: promoDetail.quantity,
+                    amount_donate: promoDetail.amount_donate,
+                    amount_limit: promoDetail.amount_limit,
+                  });
+                }
+              });
+          });
+      });
+
+      // Construct the product data
+      return {
+        _id: product._id,
+        name: product.name,
+        barcode: product.barcode,
+        unit_id: product.unit_id,
+        img: product.img,
+        price: priceDetail.price,
+        priceDetail: priceDetail,
+        promotions: promotions,
+      };
+    });
+
+    // Sort products by the number of promotions in descending order
+    productsList.sort((a, b) => b.promotions.length - a.promotions.length);
+
+    return productsList; // Return the list of products
+  } catch (err) {
+    throw new Error(
+      `Error getting products with price and promotions: ${err.message}`
+    );
+  }
+}
 
 
 module.exports = {
@@ -362,4 +469,5 @@ module.exports = {
   addProductWithWarehouse,
   updateProduct,
   getAllProductsWithPriceAndPromotion,
+  getAllProductsWithPriceAndPromotionNoCategory
 };
