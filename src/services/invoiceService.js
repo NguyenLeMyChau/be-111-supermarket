@@ -13,14 +13,15 @@ const getAllInvoices = async () => {
 
         // Duyệt qua products bên trong detail
         const productsWithInfo = await Promise.all(detail.products.map(async (item) => {
-            const product = await Product.findById(item.product).select('name img unit_id').lean();
+            const product = await Product.findById(item.product).select('name img unit_id item_code').lean();
             const unit = await Unit.findById(product.unit_id).select('description').lean();
 
             return {
                 ...item,
                 productName: product ? product.name : 'Unknown',
                 productImg: product ? product.img : null,
-                unitName: unit ? unit.description : 'Unknown'
+                unitName: unit ? unit.description : 'Unknown',
+                item_code: product ? product.item_code : 'Unknown'
             };
         }));;
 

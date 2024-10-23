@@ -4,7 +4,7 @@ const AutoIncrement = require('mongoose-sequence')(mongoose);
 const productSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   description: { type: String, required: true, trim: true },
-  barcode: { type: String, required: true, trim: true },
+  barcode: { type: String, trim: true, default: null },
   item_code: { type: String, required: true, trim: true },
   supplier_id: { type: mongoose.Schema.Types.ObjectId, ref: 'supplier' },
   category_id: { type: mongoose.Schema.Types.ObjectId, ref: 'category' },
