@@ -44,14 +44,14 @@ async function getCartById(accountId) {
     }
 }
 
-async function addProductToCart(accountId, productId, quantity, price) {
+async function addProductToCart(accountId, productId, quantity, total) {
     try {
         // Tìm giỏ hàng của người dùng
         let cart = await Cart.findOne({ account_id: accountId });
         let priceInfo = await ProductPrice_Detail.findOne({product_id:productId}).populate({
             path: "productPriceHeader_id",
             match: { status: "active" }, // Only include active ProductPriceHeader
-          })|| 0;
+          });
         // Nếu giỏ hàng chưa tồn tại, tạo giỏ hàng mới
         if (!cart) {
             cart = new Cart({ account_id: accountId, products: [] });
@@ -63,11 +63,11 @@ async function addProductToCart(accountId, productId, quantity, price) {
         if (productIndex > -1) {
             // Nếu sản phẩm đã tồn tại, cập nhật số lượng sản phẩm và giá
             cart.products[productIndex].quantity += quantity;
-            cart.products[productIndex].price = priceInfo.price;
-            cart.products[productIndex].total = priceInfo.price * quantity;
+            cart.products[productIndex].price = priceInfo._id;
+            cart.products[productIndex].total = total;
         } else {
             // Nếu sản phẩm chưa tồn tại, thêm sản phẩm mới vào giỏ hàng
-            cart.products.push({ product_id: productId, quantity: quantity, price: priceInfo._id, total: quantity * priceInfo.price });
+            cart.products.push({ product_id: productId, quantity: quantity, price: priceInfo._id, total: total });
         }
 
         // Lưu giỏ hàng
@@ -84,6 +84,20 @@ async function updateCart(accountId, productList) {
         // Tìm giỏ hàng của người dùng
         let cart = await Cart.findOne({ account_id: accountId });
 
+        // Duyệt qua danh sách sản phẩm và cập nhật giá
+        for (let product of productList) {
+            // Tìm giá theo product._id từ ProductPrice_Detail
+            let priceInfo = await ProductPrice_Detail.findOne({product_id:product.product_id}).populate({
+                path: "productPriceHeader_id",
+                match: { status: "active" }, // Only include active ProductPriceHeader
+              });
+console.log(priceInfo)
+            if (priceInfo) {
+                // Gán lại giá cho sản phẩm
+                product.price =priceInfo._id;
+            }
+        }
+console.log(productList)
         // Cập nhật giỏ hàng
         cart.products = productList;
 
@@ -134,7 +148,6 @@ async function payCart(customerId, products, paymentMethod, paymentInfo, promoCo
             paymentInfo: paymentInfo,
             paymentMethod: paymentMethod,
             paymentAmount: paymentAmount,
-            voucher: promoCode ? promoCode : null,
         });
         await invoiceSaleHeader.save({ session });
 

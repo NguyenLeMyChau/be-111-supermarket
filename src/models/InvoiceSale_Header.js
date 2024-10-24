@@ -18,7 +18,6 @@ const invoiceSaleHeaderSchema = new mongoose.Schema({
     },
     paymentMethod: { type: String, required: true },
     paymentAmount: { type: Number, required: true },
-    voucher: { type: String },
 }, { timestamps: true });
 
 invoiceSaleHeaderSchema.plugin(AutoIncrement, { inc_field: 'invoiceSaleHeader_index' });
