@@ -316,6 +316,7 @@ async function getAllProductsWithPriceAndPromotion() {
         _id: product._id,
         name: product.name,
         barcode: product.barcode,
+        item_code: product.item_code,
         unit_id: product.unit_id,
         img: product.img,
         price: priceDetail.price,
@@ -438,6 +439,7 @@ async function getAllProductsWithPriceAndPromotionNoCategory() {
       return {
         _id: product._id,
         name: product.name,
+        item_code: product.item_code,
         barcode: product.barcode,
         unit_id: product.unit_id,
         img: product.img,
