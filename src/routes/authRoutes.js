@@ -32,7 +32,8 @@ router.get('/get-products-with-price-and-promotion-no-category', productControll
 
 router.post('/get-promotion-by-product',promotionController.getPromotionsByProductIdsController);
 
-router.post('/get-promotion-by-voucher',promotionController.getPromotionsByVoucher);
+router.get('/get-promotions', promotionController.getPromotionsActive);
+
 
 
 module.exports = router;

@@ -5,6 +5,7 @@ const ObjectId = mongoose.Types.ObjectId;
 async function getPromotions(req, res) {
     try {
         const promotions = await promotionService.getAllPromotion();
+        console.log(promotions)
         res.status(200).json(promotions);
     } catch (error) {
         console.error(`Error get products: ${error.message}`);
@@ -156,6 +157,15 @@ const getPromotionsByProductIdsController = async (req, res) => {
       return res.status(500).json({ message: 'Có lỗi xảy ra khi lấy thông tin khuyến mãi.' });
     }
   };
+  async function getPromotionsActive(req, res) {
+    try {
+        const promotions = await promotionService.getAllPromotionACtive();
+        res.status(200).json(promotions);
+    } catch (error) {
+        console.error(`Error get products: ${error.message}`);
+        res.status(400).json({ message: error.message });
+    }
+}
 module.exports = {
     getPromotions,
     addPromotionHeader,
@@ -166,5 +176,5 @@ module.exports = {
     updatePromotionLine,
     updatePromotionDetail,
     getPromotionsByProductIdsController,
-    getPromotionsByVoucher
+    getPromotionsActive
 };

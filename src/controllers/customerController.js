@@ -1,5 +1,4 @@
-const { addProductToCart, getCartById, payCart, updateCart, removeProductCart, updateProductCart, updateCustomerInfo, getInvoicesByAccountId, checkStockQuantityInCart } = require("../services/customerService");
-
+const { addProductToCart, getCartById, payCart, updateCart, removeProductCart, updateProductCart, updateCustomerInfo, getInvoicesByAccountId, checkStockQuantityInCart, getAllPromotionACtive } = require("../services/customerService");
 
 async function getCartByIdController(req, res) {
     try {
@@ -111,6 +110,7 @@ const checkStockQuantityInCartController = async (req, res) => {
     }
 }
 
+
 module.exports = {
     getCartByIdController,
     addProductToCartController,
@@ -120,5 +120,6 @@ module.exports = {
     updateProductCartController,
     updateCustomerInfoController,
     getInvoicesByAccountIdController,
-    checkStockQuantityInCartController
+    checkStockQuantityInCartController,
+    
 };

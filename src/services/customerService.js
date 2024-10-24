@@ -364,9 +364,6 @@ const checkStockQuantityInCart = async (item_code, quantity) => {
     }
 };
 
-
-
-
 module.exports = {
     getCartById,
     addProductToCart,
@@ -376,6 +373,6 @@ module.exports = {
     updateProductCart,
     updateCustomerInfo,
     getInvoicesByAccountId,
-    checkStockQuantityInCart
+    checkStockQuantityInCart,
 }
 
