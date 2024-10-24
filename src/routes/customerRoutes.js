@@ -18,4 +18,6 @@ router.put('/update-customer/:accountId', customerController.updateCustomerInfoC
 
 router.get('/get-invoice/:accountId', customerController.getInvoicesByAccountIdController);
 
+router.get('/check-stock-quantity-in-cart', customerController.checkStockQuantityInCartController);
+
 module.exports = router;

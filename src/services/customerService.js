@@ -10,8 +10,8 @@ const Customer = require('../models/Customer');
 const promotionService = require('./promotionService');
 const Warehouse = require('../models/Warehouse');
 const ProductPrice_Detail = require('../models/ProductPrice_Detail')
-
-
+const PromotionDetail = require('../models/Promotion_Detail');
+const PromotionLine = require('../models/Promotion_Line');
 
 async function getCartById(accountId) {
     try {
@@ -20,17 +20,18 @@ async function getCartById(accountId) {
 
         // Lấy thông tin sản phẩm từ product_id
         const productsWithDetails = await Promise.all(products.map(async (product) => {
-            const productInfo = await Product.findById(product.product_id).select('name img unit_id').lean();
+            const productInfo = await Product.findById(product.product_id).select('name img unit_id item_code').lean();
 
             const unitInfo = productInfo ? await Unit.findById(productInfo.unit_id).lean() : null;
 
-            const priceInfo = await ProductPrice_Detail.findOne({product_id:product.product_id}).populate({
+            const priceInfo = await ProductPrice_Detail.findOne({ product_id: product.product_id }).populate({
                 path: "productPriceHeader_id",
                 match: { status: "active" }, // Only include active ProductPriceHeader
-              })|| 0;
+            }) || 0;
             return {
                 product_id: product.product_id,
                 name: productInfo ? productInfo.name : null,
+                item_code: productInfo ? productInfo.item_code : null,
                 img: productInfo ? productInfo.img : null,
                 quantity: product.quantity,
                 price: priceInfo.price,
@@ -48,10 +49,10 @@ async function addProductToCart(accountId, productId, quantity, price) {
     try {
         // Tìm giỏ hàng của người dùng
         let cart = await Cart.findOne({ account_id: accountId });
-        let priceInfo = await ProductPrice_Detail.findOne({product_id:productId}).populate({
+        let priceInfo = await ProductPrice_Detail.findOne({ product_id: productId }).populate({
             path: "productPriceHeader_id",
             match: { status: "active" }, // Only include active ProductPriceHeader
-          })|| 0;
+        }) || 0;
         // Nếu giỏ hàng chưa tồn tại, tạo giỏ hàng mới
         if (!cart) {
             cart = new Cart({ account_id: accountId, products: [] });
@@ -178,7 +179,7 @@ async function payCart(customerId, products, paymentMethod, paymentInfo, promoCo
         for (const product of products) {
             const pro = await Product.findById(product.product_id).session(session);
             const unit = await Unit.findById(pro.unit_id).session(session);
-            console.log(pro,unit) // Sử dụng session cho findById
+            console.log(pro, unit) // Sử dụng session cho findById
             const conversionFactor = unit.quantity || 1;
 
             // Tìm warehouse bằng item_code, có session
@@ -286,14 +287,40 @@ const getInvoicesByAccountId = async (accountId) => {
             const productsWithInfo = await Promise.all(detail.products.map(async (item) => {
                 const product = await Product.findById(item.product).select('name img unit_id').lean();
                 const unit = await Unit.findById(product.unit_id).select('description').lean();
+                const promotionDetail = await PromotionDetail.findOne({ _id: item.promotion }).lean();
+                let promotionLine = null;
+
+                // Kiểm tra và xử lý khuyến mãi nếu có
+                if (promotionDetail) {
+                    promotionLine = await PromotionLine.findOne({ _id: promotionDetail.promotionLine_id }).lean();
+
+                    // Gán promotionDetail vào promotionLine nếu promotionLine tồn tại
+                    if (promotionLine) {
+                        promotionLine.promotionDetail = promotionDetail;
+                    }
+                }
+
+                // Tính giá sau khuyến mãi (nếu khuyến mãi là loại "amount")
+                let discountedPrice = item.price;
+                if (promotionLine && promotionLine.type === 'amount') {
+                    const discountAmount = promotionDetail.amount_donate || 0;
+                    const minQuantity = promotionDetail.quantity || 1;
+                    if (item.quantity >= minQuantity) {
+                        discountedPrice = Math.max(0, item.price - discountAmount);
+                    }
+                } else {
+                    discountedPrice = 0;
+                }
 
                 return {
                     ...item,
+                    promotion: promotionLine,
+                    discountedPrice,  // Thêm giá sau khi áp dụng khuyến mãi
                     productName: product ? product.name : 'Unknown',
                     productImg: product ? product.img : null,
                     unitName: unit ? unit.description : 'Unknown'
                 };
-            }));;
+            }));
 
             // Trả về thông tin hóa đơn cùng chi tiết và thông tin sản phẩm
             return {
@@ -309,6 +336,22 @@ const getInvoicesByAccountId = async (accountId) => {
     }
 };
 
+const checkStockQuantityInCart = async (item_code, quantity) => {
+    try {
+        const warehouse = await Warehouse.findOne({ item_code: item_code });
+        if (!warehouse) {
+            return { inStock: false, message: `Warehouse with item_code ${item_code} not found` };
+        }
+
+        if (warehouse.stock_quantity < quantity) {
+            return { inStock: false, message: `Tồn kho không đủ. Số lượng còn lại: ${warehouse.stock_quantity}` };
+        }
+
+        return { inStock: true }; // Tồn kho đủ
+    } catch (error) {
+        throw new Error(`Error checking stock quantity: ${error.message}`);
+    }
+};
 
 
 
@@ -321,6 +364,7 @@ module.exports = {
     removeProductCart,
     updateProductCart,
     updateCustomerInfo,
-    getInvoicesByAccountId
+    getInvoicesByAccountId,
+    checkStockQuantityInCart
 }
 
