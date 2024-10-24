@@ -9,6 +9,8 @@ const Unit = require('../models/Unit');
 const Customer = require('../models/Customer');
 const promotionService = require('./promotionService');
 const Warehouse = require('../models/Warehouse');
+const ProductPrice_Detail = require('../models/ProductPrice_Detail')
+
 
 
 async function getCartById(accountId) {
@@ -22,12 +24,16 @@ async function getCartById(accountId) {
 
             const unitInfo = productInfo ? await Unit.findById(productInfo.unit_id).lean() : null;
 
+            const priceInfo = await ProductPrice_Detail.findOne({product_id:product.product_id}).populate({
+                path: "productPriceHeader_id",
+                match: { status: "active" }, // Only include active ProductPriceHeader
+              })|| 0;
             return {
                 product_id: product.product_id,
                 name: productInfo ? productInfo.name : null,
                 img: productInfo ? productInfo.img : null,
                 quantity: product.quantity,
-                price: product.price,
+                price: priceInfo.price,
                 unit: unitInfo,
                 total: product.total,
             };
@@ -42,7 +48,10 @@ async function addProductToCart(accountId, productId, quantity, price) {
     try {
         // Tìm giỏ hàng của người dùng
         let cart = await Cart.findOne({ account_id: accountId });
-
+        let priceInfo = await ProductPrice_Detail.findOne({product_id:productId}).populate({
+            path: "productPriceHeader_id",
+            match: { status: "active" }, // Only include active ProductPriceHeader
+          })|| 0;
         // Nếu giỏ hàng chưa tồn tại, tạo giỏ hàng mới
         if (!cart) {
             cart = new Cart({ account_id: accountId, products: [] });
@@ -54,11 +63,11 @@ async function addProductToCart(accountId, productId, quantity, price) {
         if (productIndex > -1) {
             // Nếu sản phẩm đã tồn tại, cập nhật số lượng sản phẩm và giá
             cart.products[productIndex].quantity += quantity;
-            cart.products[productIndex].price = price;
-            cart.products[productIndex].total = price * quantity;
+            cart.products[productIndex].price = priceInfo.price;
+            cart.products[productIndex].total = priceInfo.price * quantity;
         } else {
             // Nếu sản phẩm chưa tồn tại, thêm sản phẩm mới vào giỏ hàng
-            cart.products.push({ product_id: productId, quantity: quantity, price: price, total: quantity * price });
+            cart.products.push({ product_id: productId, quantity: quantity, price: priceInfo._id, total: quantity * priceInfo.price });
         }
 
         // Lưu giỏ hàng
