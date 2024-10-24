@@ -298,8 +298,8 @@ const getInvoicesByAccountId = async (accountId) => {
             const productsWithInfo = await Promise.all(detail.products.map(async (item) => {
                 const product = await Product.findById(item.product).select('name img unit_id').lean();
                 const unit = await Unit.findById(product.unit_id).select('description').lean();
-                const promotionDetail = await PromotionDetail.findOne({ _id: item.promotion }).lean();
-                let promotionLine = null;
+                const promotionDetail = await PromotionDetail.findOne({ _id: item.promotion }).lean() || {};
+                let promotionLine = {};
 
                 // Kiểm tra và xử lý khuyến mãi nếu có
                 if (promotionDetail) {
@@ -347,10 +347,12 @@ const getInvoicesByAccountId = async (accountId) => {
                     total = item.quantity * item.price;
                 }
 
+                promotionDetail.discountedPrice = discountedPrice;
+                promotionDetail.total = total;
+
                 return {
                     ...item,
                     promotion: promotionLine,
-                    discountedPrice,  // Thêm giá sau khi áp dụng khuyến mãi
                     total,
                     productName: product ? product.name : 'Unknown',
                     productImg: product ? product.img : null,
