@@ -92,13 +92,11 @@ async function updateCart(accountId, productList) {
                 path: "productPriceHeader_id",
                 match: { status: "active" }, // Only include active ProductPriceHeader
               });
-console.log(priceInfo)
             if (priceInfo) {
                 // Gán lại giá cho sản phẩm
                 product.price =priceInfo._id;
             }
         }
-console.log(productList)
         // Cập nhật giỏ hàng
         cart.products = productList;
 
@@ -129,7 +127,7 @@ async function removeAllProductInCart(accountId) {
     }
 }
 
-async function payCart(customerId, products, paymentMethod, paymentInfo, promoCode, paymentAmount) {
+async function payCart(customerId, products, paymentMethod, paymentInfo, paymentAmount) {
     const session = await mongoose.startSession();
     session.startTransaction();
 
