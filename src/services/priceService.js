@@ -209,7 +209,7 @@ async function getProductsWithoutPriceAndActivePromotion(productPriceHeader_id) 
     // Bước 2: Lọc các sản phẩm không có trong productPrice_detail
     const productsWithoutPrice = await Product.find({
       _id: { $nin: productIdsWithPrice } // Lọc những sản phẩm không có trong danh sách đã tìm
-    });
+    }) .populate("unit_id");
 
     return productsWithoutPrice;
   } catch (error) {
