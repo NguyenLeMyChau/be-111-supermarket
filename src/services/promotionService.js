@@ -151,8 +151,10 @@ const updatePromotionDetail = async (id, promotionDetailData) => {
 
 const getPromotionByProductId = async (productId) => {
     try {
-      // Tìm chi tiết khuyến mãi cho product_id đã cho, với điều kiện promotionLine và promotionHeader isActive === true
-      const promotions = await PromotionDetail.find({ product_id: productId }) // Tìm các khuyến mãi có product_id bằng với productId
+      // Tìm chi tiết khuyến mãi cho product_id hoặc product_donate đã cho, với điều kiện promotionLine và promotionHeader isActive === true
+      const promotions = await PromotionDetail.find({
+        $or: [{ product_id: productId }, { product_donate: productId }] // Tìm các khuyến mãi có product_id hoặc product_donate bằng với productId
+      })
         .populate({
           path: 'promotionLine_id',
           match: { isActive: true }, // Điều kiện isActive === true cho promotionLine
@@ -166,8 +168,9 @@ const getPromotionByProductId = async (productId) => {
         .exec();
   
       // Lọc ra các khuyến mãi hợp lệ, nơi promotionLine và promotionHeader không bị null (đảm bảo isActive === true)
-      const validPromotions = promotions.filter(promotion =>
-        promotion.promotionLine_id && promotion.promotionLine_id.promotionHeader_id
+      const validPromotions = promotions.filter(
+        (promotion) =>
+          promotion.promotionLine_id && promotion.promotionLine_id.promotionHeader_id
       );
   
       // Trả về các khuyến mãi hợp lệ
@@ -177,6 +180,7 @@ const getPromotionByProductId = async (productId) => {
       throw error;
     }
   };
+  
   
   const getPromotionByVoucher = async (voucher) => {
     try {
