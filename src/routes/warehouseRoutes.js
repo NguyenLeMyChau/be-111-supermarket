@@ -10,4 +10,5 @@ router.put('/update-order-status', warehouseController.updateOrderStatusControll
 router.post('/add-bill-warehouse', warehouseController.addBillWarehouseController);
 router.get('/get-all-bill', warehouseController.getAllBillController);
 router.put('/update-bill', warehouseController.updateBillController);
+router.get('/get-all-transaction', warehouseController.getAllTransactionController);
 module.exports = router;

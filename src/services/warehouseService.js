@@ -500,6 +500,15 @@ const updateBill = async (oldBillId, newBillId, productList) => {
     }
 };
 
+const getAllTransaction = async () => {
+    try {
+        const transactions = await TransactionInventory.find().lean();
+        return transactions;
+    } catch (error) {
+        throw new Error(`Error getting all transactions: ${error.message}`);
+    }
+};
+
 
 
 module.exports = {
@@ -509,5 +518,6 @@ module.exports = {
     updateOrderStatus,
     addBillWarehouse,
     getAllBill,
-    updateBill
+    updateBill,
+    getAllTransaction
 };
