@@ -1,5 +1,6 @@
 const Account = require('../models/Account');
 const Employee = require('../models/Employee');
+const Customer = require('../models/Customer');
 
 async function getAllEmployee() {
     try {
@@ -46,7 +47,29 @@ async function updateEmployee(employeeId, employeeData) {
     }
 }
 
+async function getAllCustomer() {
+    try {
+        const accounts = await Account.find({ role: 'customer' });
+
+        const customers = await Promise.all(accounts.map(async (account) => {
+            const customer = await Customer.findOne({ account_id: account._id });
+            if (customer) {
+                const customerObj = customer.toObject();
+                customerObj.active = account.active;
+                return customerObj;
+            }
+            return null;
+        }));
+
+        return customers.filter(customer => customer !== null);
+    } catch (err) {
+        throw new Error(`Error getting all customer: ${err.message}`);
+    }
+}
+
+
 module.exports = {
     getAllEmployee,
     updateEmployee,
+    getAllCustomer
 };
