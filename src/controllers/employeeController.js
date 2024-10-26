@@ -1,4 +1,4 @@
-const { getAllEmployee, updateEmployee, getAllCustomer } = require("../services/employeeService");
+const { getAllEmployee, updateEmployee, getAllCustomer, updateCustomer } = require("../services/employeeService");
 
 
 async function getEmployees(req, res) {
@@ -33,8 +33,21 @@ const getAllCustomerController = async (req, res) => {
     }
 }
 
+async function updateCustomerController(req, res) {
+    try {
+        const { customerId } = req.params;
+        const customerData = req.body;
+        const updatedCustomer = await updateCustomer(customerId, customerData);
+        res.status(200).json(updatedCustomer);
+    } catch (error) {
+        console.error(`Error update customer: ${error.message}`);
+        res.status(400).json({ message: error.message });
+    }
+}
+
 module.exports = {
     getEmployees,
     updateEmployeeController,
-    getAllCustomerController
+    getAllCustomerController,
+    updateCustomerController
 };
