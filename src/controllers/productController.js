@@ -1,4 +1,4 @@
-const { getAllCategory, getAllProduct, getProductsBySupplierId, getProductsDetail, addCategory, updateCategory, addProductWithWarehouse, updateProduct, getAllProductsWithPriceAndPromotion, getAllProductsWithPriceAndPromotionNoCategory } = require("../services/productService");
+const { getAllCategory, getAllProduct, getProductsBySupplierId, getProductsDetail, addCategory, updateCategory, addProductWithWarehouse, updateProduct, getAllProductsWithPriceAndPromotion, getAllProductsWithPriceAndPromotionNoCategory, getProductsByBarcodeInUnitConvert } = require("../services/productService");
 
 
 async function getCategories(req, res) {
@@ -107,6 +107,17 @@ async function getAllProductsWithPriceAndPromotionNoCategoryController(req, res)
         res.status(400).json({ message: error.message });
     }
 }
+async function getProductsByBarcodeInUnitConvertController(req, res) {
+    try {
+        const {barcode} = req.body;
+        
+        const products = await getProductsByBarcodeInUnitConvert(barcode);
+        res.status(200).json(products);
+    } catch (error) {
+        console.error(`Error get products with price and promotions: ${error.message}`);
+        res.status(400).json({ message: error.message });
+    }
+}
 module.exports = {
     getCategories,
     addCategoryController,
@@ -117,5 +128,6 @@ module.exports = {
     addProductWithWarehouseController,
     updateProductController,
     getProductsWithPriceAndPromotion,
-    getAllProductsWithPriceAndPromotionNoCategoryController
+    getAllProductsWithPriceAndPromotionNoCategoryController,
+    getProductsByBarcodeInUnitConvertController
 };

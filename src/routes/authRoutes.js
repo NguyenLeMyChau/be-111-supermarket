@@ -34,6 +34,6 @@ router.post('/get-promotion-by-product',promotionController.getPromotionsByProdu
 
 router.get('/get-promotions', promotionController.getPromotionsActive);
 
-
+router.post('/get-product-by-barcode',productController.getProductsByBarcodeInUnitConvertController)
 
 module.exports = router;
