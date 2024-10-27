@@ -339,7 +339,7 @@ const getAllBill = async () => {
                     name: productInfo ? productInfo.name : null,
                     item_code: productInfo ? productInfo.item_code : null,
                     quantity: product.quantity,
-                    unit_name: unit ? unit.description : null,
+                    unit_name: unit ? unit : null,
                 };
             })));
 
@@ -393,42 +393,37 @@ const updateBill = async (oldBillId, newBillId, productList) => {
             throw new Error('Không tìm thấy chi tiết đơn hàng cho oldBillId này.');
         }
 
+        // Chuyển đổi unit_name thành unit_id trong productList
+        const updatedProductList = productList.map(product => {
+            if (product.unit_name && product.unit_name._id) {
+                return {
+                    ...product,
+                    unit_id: product.unit_name._id,
+                    unit_name: undefined // Loại bỏ unit_name nếu không cần thiết
+                };
+            }
+            return product;
+        });
         // Cập nhật chi tiết đơn hàng với danh sách sản phẩm mới
-        details.set({ products: productList });
+        details.set({ products: updatedProductList });
         await details.save();
 
         // Bước 3: Cập nhật Warehouse và TransactionInventory
         for (const product of productList) {
-            const unit = await Unit.findById(product.unit_id).session(session);
-            const conversionFactor = unit.quantity || 1;
 
             // Tìm warehouse hiện tại
-            const warehouse = await Warehouse.findOne({ item_code: product.item_code }).session(session);
-            if (!warehouse) {
-                throw new Error(`Không tìm thấy kho với item_code: ${product.item_code}`);
-            }
+            const warehouse = await Warehouse.findOne({ item_code: product.item_code, unit_id: product.unit_name._id }).session(session);
 
             // Tìm giao dịch cũ trong TransactionInventory dựa vào product_id và oldBillId
             const existingTransaction = await TransactionInventory.findOne({
                 product_id: product.product_id,
-                order_id: header._id // Dựa theo _id của header
+                unit_id: product.unit_name._id,
+                order_id: header._id
             }).session(session);
 
-            if (existingTransaction) {
-                // Tính lại số lượng cũ (đã nhân với conversionFactor trước đó)
-                const oldQuantity = existingTransaction.quantity * conversionFactor;
-
-                // Trừ số lượng cũ ra khỏi kho
-                warehouse.stock_quantity -= oldQuantity;
-            }
-
-            // Tính số lượng mới cần thêm vào kho
-            const newQuantity = product.quantity * conversionFactor;
-
-            // Cộng số lượng mới vào kho
-            warehouse.stock_quantity += newQuantity;
-
             // Lưu cập nhật kho
+            warehouse.stock_quantity -= existingTransaction.quantity;
+            warehouse.stock_quantity += product.quantity;
             await warehouse.save({ session });
 
             // Nếu đã có transaction cũ thì cập nhật, nếu chưa thì tạo mới
