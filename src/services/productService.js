@@ -512,7 +512,14 @@ async function getAllProductsWithPriceAndPromotionNoCategory() {
   }
 }
 
-
+async function getProductsByBarcodeInUnitConvert(barcode) {
+  try {
+    const products = await Product.find({ "unit_convert.barcode": barcode });
+    return products;
+  } catch (err) {
+    throw new Error(`Error getting products by barcode in unit_convert: ${err.message}`);
+  }
+}
 module.exports = {
   getAllCategory,
   addCategory,
@@ -523,5 +530,6 @@ module.exports = {
   addProductWithWarehouse,
   updateProduct,
   getAllProductsWithPriceAndPromotion,
-  getAllProductsWithPriceAndPromotionNoCategory
+  getAllProductsWithPriceAndPromotionNoCategory,
+  getProductsByBarcodeInUnitConvert,
 };
