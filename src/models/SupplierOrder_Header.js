@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const AutoIncrement = require('mongoose-sequence')(mongoose);
 
 const supplierOrderHeaderSchema = new mongoose.Schema({
-    supplier_id: { type: mongoose.Schema.Types.ObjectId, ref: 'supplier' },
+    // supplier_id: { type: mongoose.Schema.Types.ObjectId, ref: 'supplier' },
     account_id: { type: mongoose.Schema.Types.ObjectId, ref: 'account' },
     // status: {
     //     type: String,

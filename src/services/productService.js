@@ -153,22 +153,23 @@ const addProductWithWarehouse = async (productData) => {
     });
     await product.save({ session });
 
-    // Bước 5: Kiểm tra item_code từ productData và tạo Warehouse mới
-    if (item_code) {
-      const existingWarehouse = await Warehouse.findOne({ item_code }).session(session);
+    // Bước 5: Tạo item_code cho từng đơn vị trong unit_convert
+    for (const unit of unit_convert) {
 
-      if (!existingWarehouse) {
-        // Nếu chưa có, tạo Warehouse mới với item_code
-        const newWarehouse = new Warehouse({
-          item_code,
+      const existingUnitWarehouse = await Warehouse.findOne({ item_code: item_code, unit_id: unit.unit }).session(session);
+
+      if (!existingUnitWarehouse) {
+        const newUnitWarehouse = new Warehouse({
+          item_code: item_code,
+          unit_id: unit.unit,
           stock_quantity: 0,
           min_stock_threshold: productData.min_stock_threshold,
         });
 
-        await newWarehouse.save({ session });
-        console.log("New warehouse created:", newWarehouse);
+        await newUnitWarehouse.save({ session });
+        console.log("New warehouse created for unit:", newUnitWarehouse);
       } else {
-        console.log("Warehouse with this item_code already exists.");
+        console.log("Warehouse with this unit item_code already exists.");
       }
     }
 
