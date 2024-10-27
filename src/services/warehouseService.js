@@ -33,9 +33,20 @@ async function getAllWarehouse() {
             const warehouseObj = warehouse.toObject();
 
             // Tìm tất cả sản phẩm theo item_code của warehouse
-            const products = await Product.findOne({ item_code: warehouse.item_code }).select('name').lean();
+            const products = await Product.findOne({ item_code: warehouse.item_code }).select('name unit_convert').lean();
 
             const unit = await Unit.findById(warehouse.unit_id).select('description').lean();
+
+            let unitBasic = null;
+
+            if (products && Array.isArray(products.unit_convert)) {
+                for (const unitData of products.unit_convert) {
+                    // Kiểm tra nếu là đơn vị cơ bản và tính số lượng
+                    if (unitData?.checkBaseUnit) {
+                        unitBasic = await Unit.findById(unitData.unit).select('description').lean();
+                    }
+                }
+            }
 
             // Tính toán status dựa trên stock_quantity và min_stock_threshold
             const status = getWarehouseStatus(warehouseObj.stock_quantity, warehouseObj.min_stock_threshold);
@@ -45,7 +56,9 @@ async function getAllWarehouse() {
                 ...warehouseObj,
                 product: products ? products.name : null,
                 status: status,
-                unit: unit ? unit : null
+                unit: unit ? unit : null,
+                unitBasic: unitBasic ? unitBasic : null,
+                unit_convert: products ? products.unit_convert : null,
             };
         }));
 
