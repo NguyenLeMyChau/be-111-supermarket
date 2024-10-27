@@ -3,7 +3,6 @@ const AutoIncrement = require('mongoose-sequence')(mongoose);
 
 const warehouseSchema = new mongoose.Schema({
     stock_quantity: { type: Number, default: 0 },
-    min_stock_threshold: { type: Number, default: 0 },
     item_code: { type: String, required: true },
     unit_id: { type: mongoose.Schema.Types.ObjectId, ref: 'unit' },
 }, { timestamps: true });

@@ -163,7 +163,6 @@ const addProductWithWarehouse = async (productData) => {
           item_code: item_code,
           unit_id: unit.unit,
           stock_quantity: 0,
-          min_stock_threshold: productData.min_stock_threshold,
         });
 
         await newUnitWarehouse.save({ session });
@@ -250,7 +249,6 @@ const updateProduct = async (productId, productData) => {
           item_code: item_code,
           unit_id: unit.unit,
           stock_quantity: 0,
-          min_stock_threshold: productData.min_stock_threshold,
         });
 
         await newUnitWarehouse.save({ session });

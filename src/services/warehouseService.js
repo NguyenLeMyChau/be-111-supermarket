@@ -48,14 +48,10 @@ async function getAllWarehouse() {
                 }
             }
 
-            // Tính toán status dựa trên stock_quantity và min_stock_threshold
-            const status = getWarehouseStatus(warehouseObj.stock_quantity, warehouseObj.min_stock_threshold);
-
             // Trả về đối tượng bao gồm thông tin warehouse và sản phẩm phù hợp
             return {
                 ...warehouseObj,
                 product: products ? products.name : null,
-                status: status,
                 unit: unit ? unit : null,
                 unitBasic: unitBasic ? unitBasic : null,
                 unit_convert: products ? products.unit_convert : null,
