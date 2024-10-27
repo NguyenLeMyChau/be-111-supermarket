@@ -22,7 +22,32 @@ const getUnitById = async (req, res) => {
     }
 }
 
+const addUnitController = async (req, res) => {
+    const unitData = req.body;
+    try {
+        const newUnit = await unitService.addUnit(unitData);
+        return res.status(201).json(newUnit);
+    } catch (error) {
+        console.error('Failed to add unit:', error);
+        return res.status(500).json({ message: 'Failed to add unit', error: error.message });
+    }
+}
+
+const updateUnitController = async (req, res) => {
+    const { unitId } = req.params;
+    const unitData = req.body;
+    try {
+        const updatedUnit = await unitService.updateUnit(unitId, unitData);
+        return res.status(200).json(updatedUnit);
+    } catch (error) {
+        console.error('Failed to update unit:', error);
+        return res.status(500).json({ message: 'Failed to update unit', error: error.message });
+    }
+}
+
 module.exports = {
     getAllUnits,
-    getUnitById
+    getUnitById,
+    addUnitController,
+    updateUnitController
 };

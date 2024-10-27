@@ -7,4 +7,8 @@ router.get('/get-units', unitController.getAllUnits);
 
 router.get('/get-unit/:unitId', unitController.getUnitById);
 
+router.post('/add-unit', unitController.addUnitController);
+
+router.put('/update-unit/:unitId', unitController.updateUnitController);
+
 module.exports = router;

@@ -7,12 +7,7 @@ const UnitSchema = new Schema({
     type: String,
     required: true,
     trim: true,
-  },
-  quantity: {
-    type: Number,
-    required: true,
-    min: 1,
-  },
+  }
 }, {
   timestamps: true, // Tự động thêm createdAt và updatedAt
 });

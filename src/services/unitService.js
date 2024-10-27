@@ -22,7 +22,42 @@ const getUnitById = async (unitId) => {
     }
 }
 
+const addUnit = async (unit) => {
+    try {
+        if (!unit.description) {
+            throw new Error('Vui lòng nhập đơn vị tính');
+        }
+        return await Unit.create(unit);
+    } catch (error) {
+        throw new Error('Error creating unit: ' + error.message);
+    }
+}
+
+const updateUnit = async (unitId, unitData) => {
+    try {
+        if (!unitId) {
+            throw new Error('unitId is required');
+        }
+        // Tìm tài liệu theo unitId
+        const unit = await Unit.findOne({ _id: unitId });
+        if (!unit) {
+            throw new Error('Unit not found');
+        }
+
+        // Cập nhật các thuộc tính mới vào tài liệu
+        unit.set({ ...unitData });
+
+        // Lưu lại tài liệu sau khi cập nhật
+        return await unit.save();
+    }
+    catch (error) {
+        throw new Error('Error updating unit: ' + error.message);
+    }
+}
+
 module.exports = {
     getAllUnits,
-    getUnitById
+    getUnitById,
+    addUnit,
+    updateUnit
 };
