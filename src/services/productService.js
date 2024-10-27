@@ -109,47 +109,67 @@ const addProductWithWarehouse = async (productData) => {
   session.startTransaction(); // Bắt đầu transaction
 
   try {
-    const { item_code, unit_id, barcode } = productData;
+    const { item_code, barcode, unit_convert } = productData;
 
     // Bước 1: Kiểm tra xem sản phẩm với cùng item_code và unit_id đã tồn tại chưa
-    const existingProduct = await Product.findOne({
-      item_code,
-      unit_id,
-    }).session(session);
+    const existingProduct = await Product.findOne({ item_code }).session(session);
+
     if (existingProduct) {
-      throw new Error("Sản phẩm với item_code");
+      throw new Error("Sản phẩm với mã hàng đã tồn tại");
     }
 
-    // Bước 2: Kiểm tra xem barcode đã tồn tại chưa
-    if (barcode) {
-      const existingBarcode = await Product.findOne({ barcode }).session(session);
-      if (existingBarcode) {
-        throw new Error("Sản phẩm với mã barcode này đã tồn tại.");
+    // Bước 3: Kiểm tra và thêm unit_id nếu checkBaseUnit là true
+    let baseUnitId = null;
+    let baseUnitBarcode = null;
+    let baseUnitImg = null;
+    if (unit_convert && Array.isArray(unit_convert)) {
+      const baseUnits = unit_convert.filter(unit => unit.checkBaseUnit === true);
+      if (baseUnits.length === 0) {
+        throw new Error("Phải có 1 đơn vị cơ bản được chọn");
       }
+      if (baseUnits.length > 1) {
+        throw new Error("Chỉ được phép có một đơn vị cơ bản");
+      }
+      if (baseUnits[0].barcode) {
+        const existingBarcode = await Product.findOne({ barcode }).session(session);
+        if (existingBarcode) {
+          throw new Error(`Sản phẩm với mã barcode ${baseUnits[0].barcode} này đã tồn tại.`);
+        }
+      }
+
+      baseUnitId = baseUnits[0].unit;
+      baseUnitBarcode = baseUnits[0].barcode;
+      baseUnitImg = baseUnits[0].img;
+    } else {
+      throw new Error("unit_convert phải là một mảng và không được rỗng.");
     }
 
-    // Bước 3: Tạo sản phẩm và lưu vào CSDL với session
-    const product = new Product(productData);
+    // Bước 4: Tạo sản phẩm và lưu vào CSDL với session
+    const product = new Product({
+      ...productData,
+      unit_id: baseUnitId,
+      barcode: baseUnitBarcode,
+      img: baseUnitImg,
+    });
     await product.save({ session });
 
-    // Bước 4: Kiểm tra item_code từ productData và tạo Warehouse mới
-    if (item_code) {
-      const existingWarehouse = await Warehouse.findOne({ item_code }).session(
-        session
-      );
+    // Bước 5: Tạo item_code cho từng đơn vị trong unit_convert
+    for (const unit of unit_convert) {
 
-      if (!existingWarehouse) {
-        // Nếu chưa có, tạo Warehouse mới với item_code
-        const newWarehouse = new Warehouse({
-          item_code,
+      const existingUnitWarehouse = await Warehouse.findOne({ item_code: item_code, unit_id: unit.unit }).session(session);
+
+      if (!existingUnitWarehouse) {
+        const newUnitWarehouse = new Warehouse({
+          item_code: item_code,
+          unit_id: unit.unit,
           stock_quantity: 0,
           min_stock_threshold: productData.min_stock_threshold,
         });
 
-        await newWarehouse.save({ session });
-        console.log("New warehouse created:", newWarehouse);
+        await newUnitWarehouse.save({ session });
+        console.log("New warehouse created for unit:", newUnitWarehouse);
       } else {
-        console.log("Warehouse with this item_code already exists.");
+        console.log("Warehouse with this unit item_code already exists.");
       }
     }
 
@@ -176,41 +196,71 @@ const updateProduct = async (productId, productData) => {
       throw new Error("Product not found");
     }
 
-    const { item_code, unit_id, barcode, min_stock_threshold } = productData;
+    const { item_code, unit_convert } = productData;
 
     // Bước 1: Kiểm tra xem sản phẩm với cùng item_code và unit_id đã tồn tại chưa
-    const existingProduct = await Product.findOne({
-      item_code,
-      unit_id,
-    }).session(session);
+    const existingProduct = await Product.findOne({ item_code }).session(session);
+
     if (
       existingProduct &&
       existingProduct._id.toString() !== productId.toString()
     ) {
-      throw new Error("Sản phẩm với item_code và đơn vị này đã tồn tại.");
+      throw new Error("Sản phẩm với item_code này đã tồn tại.");
     }
 
-    // Bước 2: Kiểm tra xem barcode đã tồn tại chưa
-    const existingBarcode = await Product.findOne({ barcode }).session(session);
-    if (
-      existingBarcode &&
-      existingBarcode._id.toString() !== productId.toString()
-    ) {
-      throw new Error("Sản phẩm với mã barcode này đã tồn tại.");
-    }
-
-    // Bước 3: Tìm warehouse theo item_code và cập nhật min_stock_threshold
-    const warehouse = await Warehouse.findOne({ item_code }).session(session);
-    if (!warehouse) {
-      throw new Error("Warehouse not found for this item_code");
-    }
-
-    // Cập nhật giá trị min_stock_threshold
-    warehouse.min_stock_threshold = min_stock_threshold;
-    await warehouse.save({ session });
-
-    // Cập nhật product
+    // Bước 2: Cập nhật thông tin sản phẩm
     product.set(productData);
+
+    // Bước 3: Kiểm tra và cập nhật unit_id nếu checkBaseUnit là true
+    let baseUnitId = null;
+    let baseUnitBarcode = null;
+    let baseUnitImg = null;
+    if (unit_convert && Array.isArray(unit_convert)) {
+      const baseUnits = unit_convert.filter(unit => unit.checkBaseUnit === true);
+      if (baseUnits.length === 0) {
+        throw new Error("Phải có 1 đơn vị cơ bản được chọn");
+      }
+      if (baseUnits.length > 1) {
+        throw new Error("Chỉ được phép có một đơn vị cơ bản");
+      }
+      if (baseUnits[0].barcode) {
+        const existingBarcode = await Product.findOne({ barcode: baseUnits[0].barcode }).session(session);
+        if (existingBarcode && existingBarcode._id.toString() !== productId.toString()) {
+          throw new Error(`Sản phẩm với mã barcode ${baseUnits[0].barcode} này đã tồn tại.`);
+        }
+      }
+
+      baseUnitId = baseUnits[0].unit;
+      baseUnitBarcode = baseUnits[0].barcode;
+      baseUnitImg = baseUnits[0].img;
+    } else {
+      throw new Error("unit_convert phải là một mảng và không được rỗng.");
+    }
+
+    product.unit_id = baseUnitId;
+    product.barcode = baseUnitBarcode;
+    product.img = baseUnitImg;
+
+    // Bước 4: Cập nhật thông tin trong unit_convert và Warehouse
+    for (const unit of unit_convert) {
+      const existingUnitWarehouse = await Warehouse.findOne({ item_code: item_code, unit_id: unit.unit }).session(session);
+
+      if (!existingUnitWarehouse) {
+        const newUnitWarehouse = new Warehouse({
+          item_code: item_code,
+          unit_id: unit.unit,
+          stock_quantity: 0,
+          min_stock_threshold: productData.min_stock_threshold,
+        });
+
+        await newUnitWarehouse.save({ session });
+        console.log("New warehouse created for unit:", newUnitWarehouse);
+      } else {
+        console.log("Warehouse with this unit item_code already exists.");
+      }
+    }
+
+    // Lưu các thay đổi vào cơ sở dữ liệu
     await product.save({ session });
 
     await session.commitTransaction(); // Hoàn thành transaction

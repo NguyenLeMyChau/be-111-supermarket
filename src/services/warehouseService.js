@@ -33,44 +33,20 @@ async function getAllWarehouse() {
             const warehouseObj = warehouse.toObject();
 
             // Tìm tất cả sản phẩm theo item_code của warehouse
-            const products = await Product.find({ item_code: warehouse.item_code }).select('name unit_id supplier_id').lean();
+            const products = await Product.findOne({ item_code: warehouse.item_code }).select('name unit_convert').lean();
 
-            // Tìm các sản phẩm có unit với quantity = 1
-            const productsWithValidUnit = await Promise.all(products.map(async product => {
-                if (product.unit_id) {
-                    // Tìm unit theo unit_id và kiểm tra quantity = 1
-                    const unit = await Unit.findOne({ _id: product.unit_id, quantity: 1 }).lean();
-                    const supplier = await Supplier.findById(product.supplier_id).select('name').lean();
-                    if (unit) {
-                        // Bỏ các ký tự sau dấu '-' hoặc '/' hoặc '–' trong tên sản phẩm
-                        const cleanedName = product.name.split(/[-/–]/)[0].trim();
+            const unit = await Unit.findById(warehouse.unit_id).select('description').lean();
 
-                        return {
-                            ...product,
-                            name: cleanedName,
-                            supplier_name: supplier ? supplier.name : null,
-                        };
+            let unitBasic = null;
+
+            if (products && Array.isArray(products.unit_convert)) {
+                for (const unitData of products.unit_convert) {
+                    // Kiểm tra nếu là đơn vị cơ bản và tính số lượng
+                    if (unitData?.checkBaseUnit) {
+                        unitBasic = await Unit.findById(unitData.unit).select('description').lean();
                     }
                 }
-                return null; // Trả về null nếu không tìm thấy unit phù hợp
-            }));
-
-            // Loại bỏ các sản phẩm không có unit phù hợp (null)
-            const filteredProducts = productsWithValidUnit.filter(product => product !== null);
-
-            // Lọc ra sản phẩm trùng tên, chỉ giữ lại sản phẩm đầu tiên
-            const uniqueProducts = {};
-            const seenNames = new Set();
-
-            filteredProducts.forEach(product => {
-                if (!seenNames.has(product.name)) {
-                    seenNames.add(product.name);
-                    uniqueProducts[product.name] = product;
-                }
-            });
-
-            // Lấy sản phẩm đầu tiên từ uniqueProducts (nếu có)
-            const productObject = Object.values(uniqueProducts)[0] || null;
+            }
 
             // Tính toán status dựa trên stock_quantity và min_stock_threshold
             const status = getWarehouseStatus(warehouseObj.stock_quantity, warehouseObj.min_stock_threshold);
@@ -78,8 +54,11 @@ async function getAllWarehouse() {
             // Trả về đối tượng bao gồm thông tin warehouse và sản phẩm phù hợp
             return {
                 ...warehouseObj,
-                product: productObject,
-                status: status
+                product: products ? products.name : null,
+                status: status,
+                unit: unit ? unit : null,
+                unitBasic: unitBasic ? unitBasic : null,
+                unit_convert: products ? products.unit_convert : null,
             };
         }));
 
@@ -253,7 +232,7 @@ const updateOrderStatus = async (orderId, newStatus, products) => {
     }
 };
 
-const addBillWarehouse = async (supplierId, accountId, billId, productList) => {
+const addBillWarehouse = async (accountId, billId, productList) => {
 
     const session = await mongoose.startSession();
     let transactionCommitted = false;
@@ -268,7 +247,6 @@ const addBillWarehouse = async (supplierId, accountId, billId, productList) => {
         }
 
         const supplierOrderHeader = new SupplierOrderHeader({
-            supplier_id: supplierId,
             account_id: accountId,
             bill_id: billId,
         });
@@ -279,15 +257,11 @@ const addBillWarehouse = async (supplierId, accountId, billId, productList) => {
         const productsToSave = [];
 
         for (const product of productList) {
-            const productFind = await Product.findOne({ unit_id: product.unit_id, item_code: product.item_code }).lean();
-
-            if (!productFind) {
-                throw new Error(`Không tìm thấy sản phẩm cho unit_id: ${product.unit_id} và item_code: ${product.item_code}`);
-            }
 
             // Đẩy từng sản phẩm vào mảng products
             productsToSave.push({
-                product_id: productFind._id,
+                product_id: product.product_id,
+                unit_id: product.unit_id,
                 quantity: product.quantity,
             });
         }
@@ -303,11 +277,11 @@ const addBillWarehouse = async (supplierId, accountId, billId, productList) => {
 
         // Tạo và lưu TransactionInventory cho mỗi sản phẩm
         for (const product of productList) {
-            const productFind = await Product.findOne({ unit_id: product.unit_id, item_code: product.item_code }).lean();
 
             const transactionInventory = new TransactionInventory({
-                product_id: productFind._id,
+                product_id: product.product_id,
                 quantity: product.quantity,
+                unit_id: product.unit_id,
                 type: 'Nhập hàng',
                 order_id: savedOrderHeader._id,
             });
@@ -317,23 +291,14 @@ const addBillWarehouse = async (supplierId, accountId, billId, productList) => {
 
         //Cập nhật số lượng trong kho
         for (const product of productList) {
-            const unit = await Unit.findById(product.unit_id).session(session); // Sử dụng session cho findById
-            const conversionFactor = unit.quantity || 1;
 
-            // Tìm warehouse bằng item_code, có session
-            const warehouse = await Warehouse.findOne({ item_code: product.item_code }).session(session);
+            const existingUnitWarehouse = await Warehouse.findOne({ item_code: product.item_code, unit_id: product.unit_id }).session(session);
 
-            // Tính số lượng cần cập nhật (quantity * conversionFactor)
-            const quantityToAdd = product.quantity * conversionFactor;
+            if (existingUnitWarehouse) {
+                existingUnitWarehouse.stock_quantity += product.quantity;
+                await existingUnitWarehouse.save({ session });
+            }
 
-            console.log('Số lượng cập nhật:', quantityToAdd);
-
-            // Cập nhật số lượng trong kho
-            console.log(`Trước cập nhật của ${warehouse.item_code}: ${warehouse.stock_quantity}`);
-            warehouse.stock_quantity += quantityToAdd;
-            console.log(`Sau cập nhật của ${warehouse.item_code}: ${warehouse.stock_quantity}`);
-
-            await warehouse.save({ session });
         }
 
         await session.commitTransaction();
@@ -356,7 +321,7 @@ const addBillWarehouse = async (supplierId, accountId, billId, productList) => {
 
 const getAllBill = async () => {
     try {
-        const orders = await SupplierOrderHeader.find().populate('supplier_id', 'name').lean();
+        const orders = await SupplierOrderHeader.find().lean();
 
         // Lấy thông tin nhân viên và chuyển đổi trạng thái của từng đơn hàng
         const ordersWithDetails = await Promise.all(orders.map(async (order) => {
@@ -365,21 +330,16 @@ const getAllBill = async () => {
 
             // Lấy tên sản phẩm dựa vào product_id
             const productsWithNames = await Promise.all(orderDetails.flatMap(detail => detail.products.map(async (product) => {
-                const productInfo = await Product.findById(product.product_id).select('name item_code unit_id').lean();
+                const productInfo = await Product.findById(product.product_id).select('name item_code unit_convert').lean();
 
-                let unitName = null;
-                if (productInfo && productInfo.unit_id) {
-                    const unitInfo = await Unit.findById(productInfo.unit_id).select('description').lean();
-                    unitName = unitInfo ? unitInfo.description : null;
-                }
+                const unit = await Unit.findById(product.unit_id).select('description').lean();
 
                 return {
                     product_id: product.product_id,
                     name: productInfo ? productInfo.name : null,
                     item_code: productInfo ? productInfo.item_code : null,
-                    unit_id: productInfo ? productInfo.unit_id : null,
-                    unit_name: unitName,
                     quantity: product.quantity,
+                    unit_name: unit ? unit.description : null,
                 };
             })));
 
@@ -500,6 +460,15 @@ const updateBill = async (oldBillId, newBillId, productList) => {
     }
 };
 
+const getAllTransaction = async () => {
+    try {
+        const transactions = await TransactionInventory.find().lean();
+        return transactions;
+    } catch (error) {
+        throw new Error(`Error getting all transactions: ${error.message}`);
+    }
+};
+
 
 
 module.exports = {
@@ -509,5 +478,6 @@ module.exports = {
     updateOrderStatus,
     addBillWarehouse,
     getAllBill,
-    updateBill
+    updateBill,
+    getAllTransaction
 };

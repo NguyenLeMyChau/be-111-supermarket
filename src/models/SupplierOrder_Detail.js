@@ -5,6 +5,7 @@ const supplierOrderDetailSchema = new mongoose.Schema({
     supplierOrderHeader_id: { type: mongoose.Schema.Types.ObjectId, ref: 'supplierOrder_header' },
     products: [{
         product_id: { type: mongoose.Schema.Types.ObjectId, ref: 'product' },
+        unit_id: { type: mongoose.Schema.Types.ObjectId, ref: 'unit' },
         quantity: { type: Number, default: 0 },
     }],
 }, { timestamps: true });
