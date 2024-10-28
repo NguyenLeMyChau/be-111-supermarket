@@ -10,16 +10,25 @@ async function getAllProductPrices() {
       productPriceHeaders.map(async (header) => {
         const productPriceDetails = await ProductPriceDetail.find({
           productPriceHeader_id: header._id,
-        });
+        }).populate("unit_id");;
 
         const detailedProductPrices = await Promise.all(
           productPriceDetails.map(async (detail) => {
-            const product = await Product.findById(detail.product_id)
-              .populate('unit_id')
-              .populate('category_id');
+            const products = await Product.find({
+              'unit_convert.unit': detail.unit_id,
+              item_code: detail.item_code
+            });
+            const product = products.length > 0 ? products[0] : null;
+        
             return {
               ...detail.toObject(),
-              product: product ? product.toObject() : null,
+              product: product
+                ? {
+                    name: product.name,
+                    category_id: product.category_id,
+                    supplier_id: product.supplier_id
+                  }
+                : null // Trả về null nếu không tìm thấy sản phẩm
             };
           })
         );
@@ -53,6 +62,45 @@ async function getAllProductPrices() {
   }
 }
 
+const copyProductPrice = async (productPriceData) => {
+  const { description, startDate, endDate, status } = productPriceData;
+
+  try {
+    // Step 1: Find the active ProductPriceHeader
+    const activeHeader = await ProductPriceHeader.findOne({ status: 'active' });
+    if (!activeHeader) {
+      throw new Error('No active ProductPriceHeader found.');
+    }
+
+    // Step 2: Get all ProductPriceDetails for the active header
+    const activePriceDetails = await ProductPriceDetail.find({
+      productPriceHeader_id: activeHeader._id,
+    });
+
+    // Step 3: Create the new ProductPriceHeader
+    const newProductPrice = new ProductPriceHeader({
+      description,
+      startDate,
+      endDate,
+      status,
+    });
+    const savedHeader = await newProductPrice.save();
+
+    // Step 4: Copy the ProductPriceDetails to the new header
+    const newPriceDetails = activePriceDetails.map((detail) => ({
+      productPriceHeader_id: savedHeader._id,
+      product_id: detail.product_id,
+      price: detail.price,
+    }));
+
+    // Save all new ProductPriceDetail records
+    await ProductPriceDetail.insertMany(newPriceDetails);
+
+    return savedHeader;
+  } catch (error) {
+    throw new Error('Error adding product price: ' + error.message);
+  }
+};
 const addProductPrice = async (productPriceData) => {
   const { description, startDate, endDate, status } = productPriceData;
 
@@ -225,5 +273,5 @@ module.exports = {
   updateProductPrice,
   addProductPriceDetail,
   updatePriceDetail,
-  getProductsWithoutPriceAndActivePromotion
+  getProductsWithoutPriceAndActivePromotion,copyProductPrice
 };
