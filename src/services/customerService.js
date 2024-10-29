@@ -181,6 +181,7 @@ async function payCart(customerId, products, paymentMethod, paymentInfo, payment
                 product_id: item.product_id,
                 quantity: item.quantity,
                 type: 'Bán hàng',
+                order_customer_id: invoiceSaleHeader._id,
             });
             await transactionInventory.save({ session });
 
