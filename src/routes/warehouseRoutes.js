@@ -11,4 +11,5 @@ router.post('/add-bill-warehouse', warehouseController.addBillWarehouseControlle
 router.get('/get-all-bill', warehouseController.getAllBillController);
 router.put('/update-bill', warehouseController.updateBillController);
 router.get('/get-all-transaction', warehouseController.getAllTransactionController);
+router.put('/cancel-bill', warehouseController.cancelBillController);
 module.exports = router;

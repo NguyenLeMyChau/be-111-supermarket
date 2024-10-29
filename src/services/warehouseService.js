@@ -228,7 +228,7 @@ const updateOrderStatus = async (orderId, newStatus, products) => {
     }
 };
 
-const addBillWarehouse = async (accountId, billId, productList) => {
+const addBillWarehouse = async (accountId, billId, description, productList) => {
 
     const session = await mongoose.startSession();
     let transactionCommitted = false;
@@ -245,6 +245,7 @@ const addBillWarehouse = async (accountId, billId, productList) => {
         const supplierOrderHeader = new SupplierOrderHeader({
             account_id: accountId,
             bill_id: billId,
+            description: description
         });
 
         const savedOrderHeader = await supplierOrderHeader.save({ session });
@@ -451,6 +452,64 @@ const updateBill = async (oldBillId, newBillId, productList) => {
     }
 };
 
+const cancelBill = async (billId) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        // Step 1: Find SupplierOrderHeader by billId and update status to false
+        const header = await SupplierOrderHeader.findOne({ _id: billId }).session(session);
+        if (!header) {
+            throw new Error('Không tìm thấy đơn hàng với mã billId này.');
+        }
+        header.status = false;
+        await header.save({ session });
+
+        // Step 2: Find SupplierOrderDetail by supplierOrderHeader_id
+        const details = await SupplierOrderDetail.findOne({ supplierOrderHeader_id: header._id }).session(session);
+        if (!details) {
+            throw new Error('Không tìm thấy chi tiết đơn hàng cho billId này.');
+        }
+
+        // Step 3: Update Warehouse and create new TransactionInventory
+        for (const product of details.products) {
+
+            const productFind = await Product.findById(product.product_id).lean();
+
+            const warehouse = await Warehouse.findOne({ item_code: productFind.item_code, unit_id: product.unit_id }).session(session);
+            if (!warehouse) {
+                throw new Error('Không tìm thấy kho hàng cho sản phẩm này.');
+            }
+
+            // Update warehouse stock
+            warehouse.stock_quantity -= product.quantity;
+            await warehouse.save({ session });
+
+            // Create new transaction with type 'Huỷ nhập phiếu'
+            const newTransaction = new TransactionInventory({
+                product_id: product.product_id,
+                unit_id: product.unit_id,
+                order_id: header._id,
+                quantity: product.quantity,
+                type: 'Huỷ phiếu nhập',
+            });
+            await newTransaction.save({ session });
+        }
+
+        // Commit transaction if no errors
+        await session.commitTransaction();
+        session.endSession();
+
+        return { message: 'Hủy đơn hàng thành công' };
+
+    } catch (error) {
+        // Rollback transaction if any error occurs
+        await session.abortTransaction();
+        session.endSession();
+        throw new Error(`Có lỗi xảy ra khi hủy đơn hàng: ${error.message}`);
+    }
+}
+
 const getAllTransaction = async () => {
     try {
         const transactions = await TransactionInventory.find().lean();
@@ -470,5 +529,6 @@ module.exports = {
     addBillWarehouse,
     getAllBill,
     updateBill,
+    cancelBill,
     getAllTransaction
 };
