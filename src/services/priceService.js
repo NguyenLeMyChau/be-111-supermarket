@@ -17,7 +17,7 @@ async function getAllProductPrices() {
             const products = await Product.find({
               'unit_convert.unit': detail.unit_id,
               item_code: detail.item_code
-            });
+            }).populate("category_id");
             const product = products.length > 0 ? products[0] : null;
         
             return {
@@ -39,7 +39,6 @@ async function getAllProductPrices() {
         };
       })
     );
-
     // Sắp xếp theo product.category_id và product.name
     const sortedProductPrices = productPricesWithDetails.map((header) => ({
       ...header,
@@ -61,23 +60,69 @@ async function getAllProductPrices() {
     throw new Error(`Error fetching product prices: ${err.message}`);
   }
 }
+const getpriceDetail = async (productPriceHeader_id) => {
+  try {
+    // Tìm kiếm các chi tiết giá sản phẩm theo `productPriceHeader_id`
+    const productPriceDetails = await ProductPriceDetail.find({
+      productPriceHeader_id: productPriceHeader_id,
+    }).populate("unit_id");
 
-const copyProductPrice = async (productPriceData) => {
+    // Lấy chi tiết sản phẩm cùng với thông tin bổ sung từ `Product`
+    const detailedProductPrices = await Promise.all(
+      productPriceDetails.map(async (detail) => {
+        const products = await Product.find({
+          'unit_convert.unit': detail.unit_id,
+          item_code: detail.item_code
+        }).populate("category_id");
+
+        // Chỉ lấy sản phẩm đầu tiên nếu tìm thấy, hoặc null nếu không có sản phẩm phù hợp
+        const product = products.length > 0 ? products[0] : null;
+
+        return {
+          ...detail.toObject(),
+          product: product
+            ? {
+                name: product.name,
+                category_id: product.category_id,
+                supplier_id: product.supplier_id,
+              }
+            : null // Trả về null nếu không tìm thấy sản phẩm
+        };
+      })
+    );
+
+    // Sắp xếp theo category_id và name
+    const sortedProductPrices = detailedProductPrices.sort((a, b) => {
+      // So sánh `category_id`
+      if (a.product?.category_id < b.product?.category_id) return -1;
+      if (a.product?.category_id > b.product?.category_id) return 1;
+
+      // Nếu `category_id` giống nhau, so sánh `name`
+      if (a.product?.name < b.product?.name) return -1;
+      if (a.product?.name > b.product?.name) return 1;
+
+      return 0;
+    });
+
+    return sortedProductPrices;
+  } catch (error) {
+    throw new Error('Lỗi khi lấy chi tiết giá sản phẩm: ' + error.message);
+  }
+};
+
+const copyProductPrice = async (productPriceData,id) => {
   const { description, startDate, endDate, status } = productPriceData;
-
   try {
     // Step 1: Find the active ProductPriceHeader
-    const activeHeader = await ProductPriceHeader.findOne({ status: 'active' });
+    const activeHeader = await ProductPriceHeader.findById(id);
     if (!activeHeader) {
-      throw new Error('No active ProductPriceHeader found.');
+      throw new Error('Không tìm thấy chương trình để sao chép');
     }
-
     // Step 2: Get all ProductPriceDetails for the active header
     const activePriceDetails = await ProductPriceDetail.find({
       productPriceHeader_id: activeHeader._id,
     });
-
-    // Step 3: Create the new ProductPriceHeader
+    // Step 3: Create the new ProductPriceHeader  
     const newProductPrice = new ProductPriceHeader({
       description,
       startDate,
@@ -89,145 +134,128 @@ const copyProductPrice = async (productPriceData) => {
     // Step 4: Copy the ProductPriceDetails to the new header
     const newPriceDetails = activePriceDetails.map((detail) => ({
       productPriceHeader_id: savedHeader._id,
-      product_id: detail.product_id,
+      item_code: detail.item_code,
+      unit_id:detail.unit_id,
       price: detail.price,
     }));
-
     // Save all new ProductPriceDetail records
     await ProductPriceDetail.insertMany(newPriceDetails);
-
-    return savedHeader;
+    
+    const allProductPrices = await getAllProductPrices();
+    return allProductPrices;
   } catch (error) {
-    throw new Error('Error adding product price: ' + error.message);
+    throw new Error('Lỗi thêm chương trình giá' + error.message);
   }
 };
 const addProductPrice = async (productPriceData) => {
   const { description, startDate, endDate, status } = productPriceData;
 
   try {
-    // Step 1: Find the active ProductPriceHeader
-    const activeHeader = await ProductPriceHeader.findOne({ status: 'active' });
-    if (!activeHeader) {
-      throw new Error('No active ProductPriceHeader found.');
-    }
-
-    // Step 2: Get all ProductPriceDetails for the active header
-    const activePriceDetails = await ProductPriceDetail.find({
-      productPriceHeader_id: activeHeader._id,
-    });
-
-    // Step 3: Create the new ProductPriceHeader
+    // Tạo mới ProductPriceHeader
     const newProductPrice = new ProductPriceHeader({
       description,
       startDate,
       endDate,
       status,
     });
-    const savedHeader = await newProductPrice.save();
+   const savedHeader = await newProductPrice.save();
 
-    // Step 4: Copy the ProductPriceDetails to the new header
-    const newPriceDetails = activePriceDetails.map((detail) => ({
-      productPriceHeader_id: savedHeader._id,
-      product_id: detail.product_id,
-      price: detail.price,
-    }));
+    // Gọi getAllProductPrices để lấy danh sách tất cả giá sản phẩm sau khi thêm thành công
+    const allProductPrices = await getAllProductPrices();
 
-    // Save all new ProductPriceDetail records
-    await ProductPriceDetail.insertMany(newPriceDetails);
-
-    return savedHeader;
+    return allProductPrices;
   } catch (error) {
-    throw new Error('Error adding product price: ' + error.message);
+    throw new Error('Lỗi thêm chương trình giá: ' + error.message);
   }
 };
 
+
 const updateProductPrice = async (priceId, updateData) => {
-  const messages = []; // Array to hold messages for feedback
+  const messages = []; // Mảng chứa các thông báo phản hồi
 
   try {
-    // Find the existing product price
+    // Tìm kiếm giá sản phẩm hiện tại
     const existingPrice = await ProductPriceHeader.findById(priceId);
 
-    // Check if the product price exists
+    // Kiểm tra nếu không tìm thấy giá sản phẩm
     if (!existingPrice) {
-      messages.push('Product price not found.');
+      messages.push('Không tìm thấy chương trình khuyến mãi');
       return { updatedPrice: null, messages };
     }
 
-    // Check if status is being updated to 'inactive'
-    if (existingPrice.status !== updateData.status && updateData.status === 'inactive') {
-      const today = new Date().toISOString().slice(0, 10); // Get today's date in YYYY-MM-DD format
-      const existingPriceEndDate = new Date(existingPrice.endDate).toISOString().slice(0, 10); 
-      // Check if the endDate is today
-      if (existingPriceEndDate === today) {
-        // Check for any records with startDate equal to today
-        const todayStartRecords = await ProductPriceHeader.find({ startDate: today });
-
-        if (todayStartRecords.length > 0) {
-          await ProductPriceHeader.updateMany(
-            { startDate: today },
-            { $set: { status: 'active' } }
-          );
-          messages.push('Updated status of records starting today to active.'); // Message for updating status
-        } else {
-          messages.push('No records found with start date today, so status cannot be updated.'); // Message if no records found
-          return { updatedPrice: null, messages }; // Return without updating
-        }
-      } else {
-        messages.push('The end date is not today, so status cannot be updated.'); // Message if endDate is not today
-       
-        return { updatedPrice: null, messages }; // Return without updating
-      }
-    }
-
-    if (existingPrice.status !== updateData.status) {
-      messages.push(`Status is being updated from ${existingPrice.status} to ${updateData.status}`); // Log status change
-    }
-
-    // Update the product price with the new data
+    // Cập nhật giá sản phẩm
     const updatedPrice = await ProductPriceHeader.findByIdAndUpdate(
       priceId,
       updateData,
       { new: true, runValidators: true }
     );
 
-    messages.push('Product price updated successfully.'); // Message for successful update
-    return { updatedPrice, messages }; // Return updated price and messages
+    // Nếu cập nhật thành công, gọi getAllProductPrices để lấy danh sách tất cả giá sản phẩm
+    const allProductPrices = await getAllProductPrices();
+
+    // Thêm thông báo cập nhật thành công
+    messages.push('Cập nhật sản phẩm thành công');
+
+    // Trả về danh sách tất cả giá sản phẩm và thông báo
+    return { updatedPrice, allProductPrices, messages };
   } catch (error) {
-    messages.push('Error updating product price: ' + error.message); // Capture error message
-    return { updatedPrice: null, messages }; // Return null and messages in case of error
+    // Thêm thông báo lỗi vào mảng messages
+    messages.push('Lỗi cập nhật sản phẩm');
+    // Trả về null và messages nếu có lỗi
+    return { updatedPrice: null, allProductPrices: null, messages };
   }
 };
 
 
 const addProductPriceDetail = async (priceDetailData) => {
-  const { productPriceHeader_id, product_id, price } = priceDetailData;
+  const { productPriceHeader_id, item_code, unit_id, price } = priceDetailData;
 
   try {
-      const headerExists = await ProductPriceHeader.findById(productPriceHeader_id);
-      if (!headerExists) {
-          throw new Error(`ProductPriceHeader with ID ${productPriceHeader_id} does not exist.`);
-      }
+    // Kiểm tra xem chương trình giá có tồn tại không
+    const headerExists = await ProductPriceHeader.findById(productPriceHeader_id);
+    if (!headerExists) {
+      throw new Error(`Chương trình giá không tồn tại`);
+    }
 
+    // Kiểm tra nếu sản phẩm với `item_code` và `unit_id` đã tồn tại trong `ProductPriceDetail`
+    const existingPriceDetail = await ProductPriceDetail.findOne({
+      productPriceHeader_id,
+      item_code,
+      unit_id
+    });
+
+    if (existingPriceDetail) {
+      // Nếu sản phẩm đã tồn tại, cập nhật giá thay vì thêm mới
+      existingPriceDetail.price = price;
+      await existingPriceDetail.save();
+      // const allProductPriceDetail = await getpriceDetail(productPriceHeader_id);
+      const allProductPriceDetail = await getAllProductPrices();
+      return { message:  'Đã cập nhật giá thành công', data: allProductPriceDetail };
+    } else {
+      // Nếu sản phẩm chưa tồn tại, thêm mới giá
       const newProductPriceDetail = new ProductPriceDetail({
-          productPriceHeader_id,
-          product_id,
-          price
+        productPriceHeader_id,
+        item_code,
+        unit_id,
+        price
       });
 
-      return await newProductPriceDetail.save();
+      await newProductPriceDetail.save();
+      // const allProductPriceDetail = await getpriceDetail(productPriceHeader_id);
+      const allProductPriceDetail = await getAllProductPrices();
+      return { message: 'Thêm giá sản phẩm thành công', data: allProductPriceDetail };
+    }
   } catch (error) {
-      throw new Error('Error adding product price detail: ' + error.message);
+    throw new Error('Thêm giá sản phẩm thất bại: ' + error.message);
   }
 };
 
 const updatePriceDetail = async (priceDetailid, updateData) => {
-  const { productPriceHeader_id, product_id, price } = updateData;
   try {
     // Check if the ProductPriceHeader exists
-    const headerExists = await ProductPriceHeader.findById(productPriceHeader_id);
+    const headerExists = await ProductPriceHeader.findById(updateData.productPriceHeader_id);
     if (!headerExists) {
-      throw new Error(`ProductPriceHeader with ID ${productPriceHeader_id} does not exist.`);
+      throw new Error(`Chương trình giá không tồn tại`);
     }
 
     // Find the ProductPriceDetail by ID and update it with the new data
@@ -238,27 +266,31 @@ const updatePriceDetail = async (priceDetailid, updateData) => {
     );
 
     if (!updatedPriceDetail) {
-      throw new Error(`ProductPriceDetail with ID ${priceDetailid} does not exist.`);
+      throw new Error(`Sản phẩm không tồn tại giá`);
     }
 
-    return updatedPriceDetail;
+    const allProductPriceDetail = await getAllProductPrices();
+      return { message:  'Cập nhật giá thành công', data: allProductPriceDetail };
   } catch (error) {
-    throw new Error('Error updating product price detail: ' + error.message);
+    throw new Error('Cập nhật giá thất bại ' + error.message);
   }
 };
 async function getProductsWithoutPriceAndActivePromotion(productPriceHeader_id) {
   try {
-    // Bước 1: Tìm các product_id có liên kết với productPriceHeader_id trong productPrice_detail
+    
+    // Bước 1: Tìm các `item_code` và `unit_id` có liên kết với `productPriceHeader_id` trong `productPrice_detail`
     const productsWithPrice = await ProductPriceDetail.find({ productPriceHeader_id })
-      .select('product_id'); // Chỉ chọn product_id để sử dụng sau này
-
-    const productIdsWithPrice = productsWithPrice.map(detail => detail.product_id.toString()); // Chuyển đổi ObjectId thành string để so sánh
-
-    // Bước 2: Lọc các sản phẩm không có trong productPrice_detail
+      .select('item_code unit_id'); // Chọn `item_code` và `unit_id`
+    
+    // Lấy danh sách `item_code` và `unit_id` có trong `productPrice_detail`
+    const itemCodesWithPrice = productsWithPrice.map(detail => detail.item_code);
+    const unitIdsWithPrice = productsWithPrice.map(detail => detail.unit_id.toString());
+    
+    // Bước 2: Lọc các sản phẩm không có `item_code` và `unit_id` trong `productPrice_detail`
     const productsWithoutPrice = await Product.find({
-      _id: { $nin: productIdsWithPrice } // Lọc những sản phẩm không có trong danh sách đã tìm
-    }) .populate("unit_id");
-
+      item_code: { $nin: itemCodesWithPrice }, // Lọc các `item_code` không nằm trong danh sách đã tìm
+      "unit_convert.unit": { $nin: unitIdsWithPrice } // Kiểm tra các `unit_id` không tồn tại trong `unit_convert`
+    }).populate("unit_id");
     return productsWithoutPrice;
   } catch (error) {
     console.error('Lỗi khi lấy sản phẩm không có giá:', error);
@@ -267,11 +299,48 @@ async function getProductsWithoutPriceAndActivePromotion(productPriceHeader_id) 
 }
 
 
+const deleteProductPriceHeader = async (headerId) => {
+  try {
+    // Xóa tất cả các ProductPriceDetail liên kết với ProductPriceHeader này
+    await ProductPriceDetail.deleteMany({ productPriceHeader_id: headerId });
+
+    // Xóa ProductPriceHeader
+    const deletedHeader = await ProductPriceHeader.findByIdAndDelete(headerId);
+
+    if (!deletedHeader) {
+      return { success: false, message: 'Không tìm thấy chương trình giá',allProductPrices:null };
+    }
+    const allProductPrices = await getAllProductPrices();
+    
+    return { success: true, message: 'Xóa thành công',allProductPrices };
+  } catch (error) {
+    return { success: false, message: 'Xóa thất bại',allProductPrices:null };
+  }
+};
+
+const deleteProductPriceDetail = async (detailId) => {
+  try {
+    const deletedDetail = await ProductPriceDetail.findByIdAndDelete(detailId);
+
+    if (!deletedDetail) {
+      return { success: false, message: 'Không tìm thấy giá cần xóa',allProductPrices:null };
+    }
+    const allProductPrices = await getAllProductPrices();
+
+    return { success: true, message: 'Xóa thành công',allProductPrices };
+  } catch (error) {
+    return { success: false, message: 'Xóa thất bại',allProductPrices:null };
+  }
+};
+
 module.exports = {
   getAllProductPrices,
   addProductPrice,
   updateProductPrice,
   addProductPriceDetail,
   updatePriceDetail,
-  getProductsWithoutPriceAndActivePromotion,copyProductPrice
+  getProductsWithoutPriceAndActivePromotion,copyProductPrice,
+  deleteProductPriceHeader,
+  deleteProductPriceDetail,
+  getpriceDetail
 };

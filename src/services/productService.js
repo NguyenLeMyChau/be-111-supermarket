@@ -55,12 +55,15 @@ async function updateCategory(categoryId, categoryData) {
 
 async function getAllProduct() {
   try {
-    const products = await Product.find().populate("unit_id", "description");
+    const products = await Product.find()
+      .populate("unit_id", "description")
+      .populate("unit_convert.unit", "description"); 
     return products;
   } catch (err) {
     throw new Error(`Error getting all products: ${err.message}`);
   }
 }
+
 async function getProductsBySupplierId(supplierId) {
   try {
     const products = await Product.find({ supplier_id: supplierId });
