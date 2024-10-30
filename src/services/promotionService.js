@@ -12,16 +12,28 @@ async function getAllPromotion() {
             const promotionLines = await PromotionLine.find({ promotionHeader_id: promotionHeader._id });
 
             const promotionDetails = await Promise.all(promotionLines.map(async (promotionLine) => {
-                const details = await PromotionDetail.find({ promotionLine_id: promotionLine._id });
-
+                const details = await PromotionDetail.find({ promotionLine_id: promotionLine._id }).populate('unit_id')
+                .populate('unit_id_donate');
                 const detailedPromotions = await Promise.all(details.map(async (detail) => {
                     const product = await Product.findById(detail.product_id).populate('unit_id');
                     const product_donate = await Product.findById(detail.product_donate).populate('unit_id');
 
+                    // // Find the product using item_code and unit_id
+                    // const product = await Product.findOne({
+                    //     item_code: detail.item_code,
+                    //     "unit_convert.unit": detail.unit_id
+                    // }).populate('unit_id'); // Populate if you want unit details
+
+                    // // Find the donated product using item_code_donate and unit_id_donate
+                    // const product_donate = await Product.findOne({
+                    //     item_code: detail.item_code_donate,
+                    //     "unit_convert.unit": detail.unit_id_donate
+                    // }).populate('unit_id'); // Populate if you want unit details
+
                     return {
                         ...detail.toObject(),
                         product: product ? product.toObject() : null,
-                        product_donate:product_donate?product_donate.toObject():null,
+                        product_donate: product_donate ? product_donate.toObject() : null,
                     };
                 }));
 
@@ -42,10 +54,13 @@ async function getAllPromotion() {
         throw new Error(`Error getting all promotions: ${err.message}`);
     }
 }
+
 const addPromotionHeader = async (promotionData) => {
     try {
         const newPromotion = new PromotionHeader(promotionData);
-        return await newPromotion.save();
+         await newPromotion.save();
+         const allPromotion = await getAllPromotion();
+         return allPromotion;
     } catch (error) {
         throw new Error('Error saving promotion header: ' + error.message);
     }
@@ -61,11 +76,14 @@ const getAllPromotionLines = async () => {
 const addPromotionLine = async (promotionLineData) => {
     const promotionHeader = await PromotionHeader.findById(promotionLineData.promotionHeader_id);
     if (!promotionHeader) {
-        throw new Error('Promotion Header không tồn tại.');
+        throw new Error('Không tìm thấy chương trình khuyến mãi');
     }
-
+    
     const promotionLine = new PromotionLine(promotionLineData);
-    return await promotionLine.save();
+    await promotionLine.save();
+
+    const allPromotion = await getAllPromotion();
+    return allPromotion;
 };
 
 const addPromotionDetail = async (promotionDetailData) => {
@@ -76,37 +94,65 @@ const addPromotionDetail = async (promotionDetailData) => {
     }
 
     const promotionDetail = new PromotionDetail(promotionDetailData);
-    return await promotionDetail.save();
+    await promotionDetail.save();
+
+    const allPromotion = await getAllPromotion();
+    return allPromotion;
 };
 const updatePromotionHeader = async (id, promotionData) => {
     try {
-        // Tìm PromotionHeader theo ID và cập nhật dữ liệu mới
+        // Find and update the PromotionHeader
         const updatedPromotion = await PromotionHeader.findByIdAndUpdate(
             id,
-            { $set: promotionData }, // Sử dụng $set để cập nhật chỉ các trường cần thiết
-            { new: true, runValidators: true } // new: true để trả về đối tượng đã được cập nhật
+            { $set: promotionData },
+            { new: true, runValidators: true }
         );
 
-        // Nếu không tìm thấy PromotionHeader với ID đó, ném ra lỗi
         if (!updatedPromotion) {
-            throw new Error('Promotion Header không tồn tại.');
+            throw new Error('Chương trình khuyến mãi không tồn tại.');
         }
 
-        return updatedPromotion; // Trả về đối tượng đã được cập nhật
+        // Get the new end date from the promotionData
+        const newEndDate = new Date(promotionData.endDate).getTime();
+
+        // Find all promotion lines associated with this header
+        const promotionLines = await PromotionLine.find({ promotionHeader_id: id });
+
+        // Loop through each line to check and update dates as needed
+        for (const line of promotionLines) {
+            const lineEndDate = new Date(line.endDate).getTime();
+            const lineStartDate = new Date(line.startDate).getTime();
+
+            // Update end date if it exceeds the PromotionHeader's new end date
+            if (lineEndDate > newEndDate) {
+                line.endDate = new Date(newEndDate);
+            }
+            // Update start date if it is after the PromotionHeader's new end date
+            if (lineStartDate > newEndDate) {
+                line.startDate = new Date(newEndDate);
+            }
+
+            // Save the updated promotion line
+            await line.save();
+        }
+
+        // Fetch all promotions after the update for return
+        const allPromotions = await getAllPromotion();
+        return allPromotions;
+
     } catch (error) {
-        throw new Error('Cập nhật Promotion Header thất bại: ' + error.message);
+        throw new Error(`Cập nhật chương trình khuyến mãi thất bại: ${error.message}`);
     }
 };
 
+
 const updatePromotionLine = async (id, promotionLineData) => {
-    try {
-        
+    const messages = [];
+    try { 
         const promotionHeader = await PromotionHeader.findById(promotionLineData.promotionHeader_id);
         if (!promotionHeader) {
-            throw new Error('Promotion Header không tồn tại.');
+            messages.push('Chương trình khuyến mãi không tồn tại.')
         }
-
-        
         const updatedPromotionLine = await PromotionLine.findByIdAndUpdate(
             id,
             { $set: promotionLineData }, // Use $set to update only the specified fields
@@ -115,20 +161,23 @@ const updatePromotionLine = async (id, promotionLineData) => {
 
     
         if (!updatedPromotionLine) {
-            throw new Error('Promotion Line không tồn tại.');
-        }
+            messages.push('dòng khuyến mãi tìm thấy');
+        }else  messages.push('Cập nhật dòng khuyến mãi thành công')
 
-        return updatedPromotionLine; // Return the updated promotion line
+        const allPromotion = await getAllPromotion();
+        return { message:messages,data: allPromotion};
     } catch (error) {
-        throw new Error('Cập nhật Promotion Line thất bại .....: ' + error.message);
+        messages.push('Cập nhật thất bại');
+        return { message:messages,data: await getAllPromotion()};
     }
 };
 const updatePromotionDetail = async (id, promotionDetailData) => {
+    const messages = [];
     try {
         // Validate that the promotion line exists
         const promotionLine = await PromotionLine.findById(promotionDetailData.promotionLine_id);
         if (!promotionLine) {
-            throw new Error('Promotion Line không tồn tại.');
+            messages.push('Dòng khuyến mãi không tồn tại.');
         }
 
         // Update the PromotionDetail
@@ -140,12 +189,14 @@ const updatePromotionDetail = async (id, promotionDetailData) => {
 
         // Check if the PromotionDetail was found and updated
         if (!updatedPromotionDetail) {
-            throw new Error('Promotion Detail không tồn tại.');
-        }
+            messages.push('Chi tiết khuyến mãi không tồn tại');
+        }else  messages.push('Cập nhật chi tiết khuyến mãi thành công')
 
-        return updatedPromotionDetail; // Return the updated promotion detail
+        const allPromotion = await getAllPromotion();
+        return { message:messages,data: allPromotion};
+
     } catch (error) {
-        throw new Error('Cập nhật Promotion Detail thất bại: ' + error.message);
+        messages.push('Cập nhật chi tiết khuyến mãi thất bại: ');
     }
 };
 
@@ -238,7 +289,92 @@ async function getAllPromotionACtive() {
         throw error;
       }
     };
-
+    const deletePromotionHeader = async (promotionHeaderId) => {
+        const messages = [];
+        try {
+            // Step 1: Find all PromotionLine documents associated with the PromotionHeader
+            const promotionLines = await PromotionLine.find({ promotionHeader_id: promotionHeaderId });
+    
+            // Step 2: Get the IDs of all associated PromotionLine documents
+            const promotionLineIds = promotionLines.map(line => line._id);
+    
+            // Step 3: Delete all PromotionDetail documents that reference any of these PromotionLine IDs
+            await PromotionDetail.deleteMany({ promotionLine_id: { $in: promotionLineIds } });
+    
+            // Step 4: Delete all PromotionLine documents associated with the PromotionHeader
+            await PromotionLine.deleteMany({ promotionHeader_id: promotionHeaderId });
+    
+            // Step 5: Delete the PromotionHeader itself
+            const result = await PromotionHeader.findByIdAndDelete(promotionHeaderId);
+            if (!result) {
+                messages.push('Không tìm thấy chương trình khuyến mãi') 
+            }else{
+               
+                messages.push('Xóa chương trình khuyến mãi thành công')
+              
+            }
+            const allPromotion = await getAllPromotion();
+            return { message:messages,data: allPromotion};
+        } catch (error) {
+            const allPromotion = await getAllPromotion();
+            messages.push('Lỗi xóa chương trình khuyến mãi') 
+            return { message:messages, data: allPromotion};
+        }
+    };
+    const deletePromotionLine = async (promotionLineId) => {
+        const messages = [];
+        try {
+           
+            const detailsDeleted = await PromotionDetail.deleteMany({ promotionLine_id: promotionLineId });
+    
+            // Bước 2: Xóa PromotionLine
+            const result = await PromotionLine.findByIdAndDelete(promotionLineId);
+            if (!result) {
+                messages.push('Không tìm thấy dòng khuyến mãi');
+            } else {
+                messages.push('Đã xóa dòng khuyến mãi thành công');
+            }
+    
+            // Tùy chọn: Bạn có thể lấy danh sách các dòng khuyến mãi hiện tại
+            const allPromotion = await getAllPromotion();
+            return {
+                message:messages,
+                data: allPromotion,
+            };
+        } catch (error) {
+            messages.push('Lỗi khi xóa dòng khuyến mãi và chi tiết: ');
+            return {
+                message:messages,
+                data:  await getAllPromotion() 
+            };
+        }
+    };
+    
+    const deletePromotionDetail = async (id) => {
+        const messages = [];
+        try {
+            const result = await PromotionDetail.findByIdAndDelete(id);
+            if (!result) {
+                messages.push('Không tìm thấy chi tiết khuyến mãi');
+            } else {
+                messages.push('Đã xóa chi tiết khuyến mãi thành công');
+            }
+    
+            const allPromotion = await getAllPromotion();
+            return {
+                message:messages,
+                data: allPromotion,
+            };
+        } catch (error) {
+            messages.push('Lỗi khi xóa chi tiết khuyến mãi: ' + error.message);
+            return {
+                message:messages,
+                data:  await getAllPromotion() 
+            };
+        }
+    };
+    
+    
 module.exports = {
     getAllPromotion,
     addPromotionHeader,
@@ -250,6 +386,9 @@ module.exports = {
     updatePromotionDetail,
     getPromotionByProductId,
     getPromotionByVoucher,
-    getAllPromotionACtive
+    getAllPromotionACtive,
+    deletePromotionHeader,
+    deletePromotionLine,
+    deletePromotionDetail
 };
 

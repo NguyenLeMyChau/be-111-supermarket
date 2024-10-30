@@ -4,6 +4,7 @@ const router = express.Router();
 const priceController = require('../controllers/priceController');
 
 router.get('/productPrice', priceController.getAllProductPrice);
+router.get('/productPriceDetail', priceController.getAllProductPriceDetail);
 router.post('/addPriceHeader', priceController.addProductPrice);
 router.post('/copyProductPrice', priceController.copyProductPrice);
 router.put('/updatePriceHeader/:priceId', priceController.updateProductPrice);

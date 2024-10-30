@@ -3,6 +3,14 @@ const ProductPriceDetail = require("../models/ProductPrice_Detail");
 const Product = require("../models/Product");
 const Unit = require("../models/Unit");
 
+async function getAllProductPriceHeader() {
+  try {
+    const productPriceHeaders = await ProductPriceHeader.find();
+    return productPriceHeaders;
+  } catch (err) {
+    throw new Error(`Error fetching product prices: ${err.message}`);
+  }
+}
 async function getAllProductPrices() {
   try {
     const productPriceHeaders = await ProductPriceHeader.find();
@@ -174,23 +182,88 @@ const updateProductPrice = async (priceId, updateData) => {
   const messages = []; // Mảng chứa các thông báo phản hồi
 
   try {
-    // Tìm kiếm giá sản phẩm hiện tại
-    const existingPrice = await ProductPriceHeader.findById(priceId);
+    const today = new Date();
 
-    // Kiểm tra nếu không tìm thấy giá sản phẩm
-    if (!existingPrice) {
-      messages.push('Không tìm thấy chương trình khuyến mãi');
-      return { updatedPrice: null, messages };
+    // Kiểm tra nếu updateData.status là 'pauseactive' và endDate cần cập nhật
+    if (updateData.status === 'pauseactive' && updateData.endDate) {
+      const endDate = new Date(updateData.endDate);
+      const startDate = updateData.startDate ? new Date(updateData.startDate) : null;
+
+      // Nếu startDate không lớn hơn hôm nay, kiểm tra endDate
+      if (!startDate || startDate <= today) {
+        // Nếu endDate lớn hơn hôm nay, đặt endDate thành hôm nay
+        if (endDate > today) {
+          updateData.endDate = today;
+        }
+      }
     }
 
-    // Cập nhật giá sản phẩm
+    // Nếu status là 'active', kiểm tra item_code trùng lặp
+    if (updateData.status === 'active') {
+      // Lấy thông tin chương trình giá hiện tại để kiểm tra chi tiết
+      const existingPrice = await ProductPriceHeader.findById(priceId);
+      if (!existingPrice) {
+        messages.push('Không tìm thấy chương trình giá');
+        return { updatedPrice: null, messages };
+      }
+
+      // Lấy các chi tiết sản phẩm từ ProductPriceDetail dựa trên ProductPriceHeader hiện tại
+      const existingDetails = await ProductPriceDetail.find({ productPriceHeader_id: priceId });
+      console.log(1)
+      console.log(existingDetails)
+      const itemCodes = existingDetails.map(detail => detail.item_code);
+      console.log(2)
+      console.log(itemCodes)
+      // Kiểm tra trùng lặp trong các ProductPriceHeader khác đang active
+      const duplicateItem = await ProductPriceDetail.aggregate([
+        {
+          $match: {
+            productPriceHeader_id: { $ne: priceId },
+            item_code: { $in: itemCodes }
+          }
+        },
+        {
+          $lookup: {
+            from: 'productPrice_header', // Tên collection của ProductPriceHeader
+            localField: 'productPriceHeader_id',
+            foreignField: '_id',
+            as: 'header'
+          }
+        },
+        {
+          $unwind: '$header'
+        },
+        {
+          $match: {
+            'header.status': 'active'
+          }
+        },
+        {
+          $limit: 1 // Giới hạn chỉ lấy 1 kết quả
+        }
+      ]);
+      console.log(332)
+      console.log(duplicateItem)
+      if (duplicateItem.length > 0) {
+        // Lấy danh sách tất cả giá sản phẩm sau khi cập nhật thành công
+    const allProductPrices = await getAllProductPrices();
+
+    // Thêm thông báo cập nhật thành công
+      
+        messages.push(`Đã có sản phẩm trùng lặp với bảng giá khác đang hoạt động (ID: ${duplicateItem[0].header.description})`);
+        return { updatedPrice: null,allProductPrices, messages };
+      }
+      
+    }
+
+    // Tiến hành cập nhật giá sản phẩm
     const updatedPrice = await ProductPriceHeader.findByIdAndUpdate(
       priceId,
       updateData,
       { new: true, runValidators: true }
     );
 
-    // Nếu cập nhật thành công, gọi getAllProductPrices để lấy danh sách tất cả giá sản phẩm
+    // Lấy danh sách tất cả giá sản phẩm sau khi cập nhật thành công
     const allProductPrices = await getAllProductPrices();
 
     // Thêm thông báo cập nhật thành công
@@ -205,6 +278,9 @@ const updateProductPrice = async (priceId, updateData) => {
     return { updatedPrice: null, allProductPrices: null, messages };
   }
 };
+
+
+
 
 
 const addProductPriceDetail = async (priceDetailData) => {
@@ -342,5 +418,6 @@ module.exports = {
   getProductsWithoutPriceAndActivePromotion,copyProductPrice,
   deleteProductPriceHeader,
   deleteProductPriceDetail,
-  getpriceDetail
+  getpriceDetail,
+  getAllProductPriceHeader
 };

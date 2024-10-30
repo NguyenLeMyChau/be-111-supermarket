@@ -30,8 +30,8 @@ const productPriceHeaderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'inactive'],
-    default: 'active'
+    enum: ['active', 'inactive','pauseactive'],
+    default: 'inactive'
   }
 }, {
   timestamps: true, // Tự động thêm createdAt và updatedAt

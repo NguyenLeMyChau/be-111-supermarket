@@ -17,10 +17,10 @@ const addPromotionHeader = async (req, res) => {
     try {
         const promotionData = req.body;
         const newPromotion = await promotionService.addPromotionHeader(promotionData);
-        return res.status(201).json({ message: 'Promotion header added successfully', data: newPromotion });
+        return res.status(201).json({ message: 'Thêm chương trình khuyến mãi thành công', data: newPromotion });
     } catch (error) {
         console.error('Failed to add promotion header:', error);
-        return res.status(500).json({ message: 'Failed to add promotion header', error: error.message });
+        return res.status(500).json({ message: 'Thêm chương trình khuyến mãi thất bại' });
     }
 };
 const getAllPromotionLines = async (req, res) => {
@@ -36,7 +36,7 @@ const addPromotionLine = async (req, res) => {
     try {
         const promotionLineData = req.body;
         const savedPromotionLine = await promotionService.addPromotionLine(promotionLineData);
-        res.status(201).json(savedPromotionLine);
+        return res.status(201).json({ message: 'Thêm dòng mãi thành công', data: savedPromotionLine });
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
@@ -74,7 +74,7 @@ const updatePromotionHeader = async (req, res) => {
 
     try {
         const updatedPromotion = await promotionService.updatePromotionHeader(id, promotionData);
-        res.status(200).json({ message: 'Promotion header updated successfully', data: updatedPromotion });
+        res.status(200).json({ message: 'Cập nhật thành công chương trình khuyến mãi', data: updatedPromotion });
     } catch (error) {
         console.error('Failed to update promotion header:', error);
         res.status(400).json({ message: error.message });
@@ -112,10 +112,6 @@ const updatePromotionDetail = async (req, res) => {
             promotionDetailData.product_donate = new ObjectId(promotionDetailData.product_donate);
         }
         const updatedPromotionDetail = await promotionService.updatePromotionDetail(id, promotionDetailData);
-
-        if (!updatedPromotionDetail) {
-            return res.status(404).json({ error: 'Promotion Detail không tồn tại.' });
-        }
 
         res.status(200).json(updatedPromotionDetail);
     } catch (error) {
@@ -166,6 +162,42 @@ const getPromotionsByProductIdsController = async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 }
+const deletePromotionHeader = async (req, res) => {
+    const { id } = req.params; // Get the ID from the URL parameter
+
+    try {
+        const { message, data } = await promotionService.deletePromotionHeader(id);
+        res.status(200).json({ message: message, data: data });
+    } catch (error) {
+        console.error('Failed to delete PromotionHeader:', error);
+        res.status(500).json({ message: 'Xóa thất bại', error: error.message });
+    }
+};
+
+const deletePromotionLine = async (req, res) => {
+    const { id } = req.params; // Get the ID from the URL parameter
+
+    try {
+        const { message, data } = await promotionService.deletePromotionLine(id);
+        res.status(200).json({ message: message, data: data });
+    } catch (error) {
+        console.error('Failed to delete PromotionLine:', error);
+        res.status(500).json({ message: 'Xóa thất bại', error: error.message });
+    }
+};
+
+const deletePromotionDetail = async (req, res) => {
+    const { id } = req.params; // Get the ID from the URL parameter
+
+    try {
+        const { message, data } = await promotionService.deletePromotionDetail(id);
+        res.status(200).json({ message: message, data: data });
+    } catch (error) {
+        console.error('Failed to delete PromotionDetail:', error);
+        res.status(500).json({ message: 'Xóa thất bại', error: error.message });
+    }
+};
+
 module.exports = {
     getPromotions,
     addPromotionHeader,
@@ -176,5 +208,8 @@ module.exports = {
     updatePromotionLine,
     updatePromotionDetail,
     getPromotionsByProductIdsController,
-    getPromotionsActive
+    getPromotionsActive,
+    deletePromotionHeader,
+    deletePromotionLine,
+    deletePromotionDetail
 };

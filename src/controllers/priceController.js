@@ -3,13 +3,20 @@ const priceService = require('../services/priceService');
 
 const getAllProductPrice = async (req, res) => {
   try {
+    const productPriceHeaders = await priceService.getAllProductPriceHeader();
+    res.status(200).json(productPriceHeaders);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+const getAllProductPriceDetail = async (req, res) => {
+  try {
     const productPriceHeaders = await priceService.getAllProductPrices();
     res.status(200).json(productPriceHeaders);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
 const addProductPrice = async (req, res) => {
   const { description, startDate, endDate, status } = req.body;
   try {
@@ -47,10 +54,6 @@ const updateProductPrice = async (req, res) => {
   try {
     // Call the service layer to update the product price
     const { updatedPrice,allProductPrices, messages } = await priceService.updateProductPrice(priceId, { description, startDate, endDate, status });
-
-    if (!updatedPrice) {
-      return res.status(404).json(messages);
-    }
 
     // Return the updated price along with success messages
     res.status(200).json({ updatedPrice,allProductPrices, messages });
@@ -137,5 +140,6 @@ module.exports = {
     getProductsWithoutPrice,
     deleteHeaderController,
     deleteDetailController,
-    copyProductPrice
+    copyProductPrice,
+    getAllProductPriceDetail
 };
