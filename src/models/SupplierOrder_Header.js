@@ -2,19 +2,21 @@ const mongoose = require('mongoose');
 const AutoIncrement = require('mongoose-sequence')(mongoose);
 
 const supplierOrderHeaderSchema = new mongoose.Schema({
-    // supplier_id: { type: mongoose.Schema.Types.ObjectId, ref: 'supplier' },
     account_id: { type: mongoose.Schema.Types.ObjectId, ref: 'account' },
-    // status: {
-    //     type: String,
-    //     enum: ['Đang chờ xử lý', 'Đã duyệt', 'Bị từ chối', 'Đang giao hàng', 'Đã giao hàng', 'Đã hủy'],
-    //     default: 'PENDING'
-    // }
     bill_id: { type: String, required: true, unique: true },
     description: { type: String, required: true },
     status: { type: Boolean, default: true },
+    cancel_reason: { type: String, required: function () { return !this.status; } }
 }, { timestamps: true });
 
 supplierOrderHeaderSchema.plugin(AutoIncrement, { inc_field: 'supplierOrderHeader_index' });
+
+supplierOrderHeaderSchema.pre('save', function (next) {
+    if (!this.status && !this.cancel_reason) {
+        return next(new Error('Cancel reason is required when status is false'));
+    }
+    next();
+});
 
 const SupplierOrderHeader = mongoose.model('supplierOrder_header', supplierOrderHeaderSchema, 'supplierOrder_header');
 

@@ -452,7 +452,7 @@ const updateBill = async (oldBillId, newBillId, productList) => {
     }
 };
 
-const cancelBill = async (billId) => {
+const cancelBill = async (billId, cancel_reason) => {
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -463,6 +463,7 @@ const cancelBill = async (billId) => {
             throw new Error('Không tìm thấy đơn hàng với mã billId này.');
         }
         header.status = false;
+        header.cancel_reason = cancel_reason; // Thêm cancel_reason vào header
         await header.save({ session });
 
         // Step 2: Find SupplierOrderDetail by supplierOrderHeader_id

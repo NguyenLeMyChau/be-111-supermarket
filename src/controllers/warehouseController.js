@@ -87,8 +87,8 @@ const updateBillController = async (req, res) => {
 
 const cancelBillController = async (req, res) => {
     try {
-        const { billId } = req.body;
-        const result = await cancelBill(billId);
+        const { billId, cancel_reason } = req.body;
+        const result = await cancelBill(billId, cancel_reason);
         return res.status(200).json(result);
     } catch (error) {
         return res.status(500).json({ message: error.message });
