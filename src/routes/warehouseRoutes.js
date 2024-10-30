@@ -13,4 +13,5 @@ router.put('/update-bill', warehouseController.updateBillController);
 router.get('/get-all-transaction', warehouseController.getAllTransactionController);
 router.put('/cancel-bill', warehouseController.cancelBillController);
 router.post('/add-stocktaking', warehouseController.addStocktakingController);
+router.get('/get-all-stocktaking', warehouseController.getAllStocktakingController);
 module.exports = router;

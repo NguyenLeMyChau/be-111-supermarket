@@ -1,4 +1,4 @@
-const { getAllWarehouse, getProductsByWarehouse, orderProductFromSupplier, updateOrderStatus, getAllOrders, getWarehousesFromSupplierId, addBillWarehouse, getAllBill, updateBill, getAllTransaction, cancelBill, addStocktaking } = require("../services/warehouseService");
+const { getAllWarehouse, getProductsByWarehouse, orderProductFromSupplier, updateOrderStatus, getAllOrders, getWarehousesFromSupplierId, addBillWarehouse, getAllBill, updateBill, getAllTransaction, cancelBill, addStocktaking, getAllStocktaking } = require("../services/warehouseService");
 
 
 async function getWarehouses(req, res) {
@@ -114,6 +114,15 @@ const addStocktakingController = async (req, res) => {
     }
 }
 
+const getAllStocktakingController = async (req, res) => {
+    try {
+        const result = await getAllStocktaking();
+        return res.status(200).json(result);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+}
+
 
 module.exports = {
     getWarehouses,
@@ -125,5 +134,6 @@ module.exports = {
     updateBillController,
     getAllTransactionController,
     cancelBillController,
-    addStocktakingController
+    addStocktakingController,
+    getAllStocktakingController
 };

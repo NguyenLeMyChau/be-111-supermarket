@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const AutoIncrement = require('mongoose-sequence')(mongoose);
 
 const stocktakingDetailSchema = new mongoose.Schema({
-    supplierOrderHeader_id: { type: mongoose.Schema.Types.ObjectId, ref: 'supplierOrder_header' },
+    stocktakingHeader_id: { type: mongoose.Schema.Types.ObjectId, ref: 'stocktaking_header' },
     products: [{
         product_id: { type: mongoose.Schema.Types.ObjectId, ref: 'product' },
         unit_id: { type: mongoose.Schema.Types.ObjectId, ref: 'unit' },

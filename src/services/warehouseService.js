@@ -596,6 +596,47 @@ const addStocktaking = async (accountId, stocktakingId, reason, productList) => 
     }
 }
 
+const getAllStocktaking = async () => {
+    try {
+        const stocktakings = await StocktakingHeader.find().lean();
+
+        const stocktakingsWithDetails = await Promise.all(stocktakings.map(async (stocktaking) => {
+            const employee = await Employee.findOne({ account_id: stocktaking.account_id }).select('name phone email').lean();
+
+            const stocktakingDetails = await StocktakingDetail.find({ stocktakingHeader_id: stocktaking._id }).lean();
+
+            const productsWithNames = await Promise.all(stocktakingDetails.flatMap(detail => detail.products.map(async (product) => {
+                const productInfo = await Product.findById(product.product_id).select('name item_code').lean();
+                const unit = await Unit.findById(product.unit_id).select('description').lean();
+
+                return {
+                    product_id: product.product_id,
+                    name: productInfo ? productInfo.name : null,
+                    item_code: productInfo ? productInfo.item_code : null,
+                    quantity_stock: product.quantity_stock,
+                    quantity_actual: product.quantity_actual,
+                    unit_name: unit ? unit.description : null,
+                };
+
+            })));
+
+            return {
+                stocktakingHeader: stocktaking,
+                employee: employee ? {
+                    name: employee.name,
+                    phone: employee.phone,
+                    email: employee.email
+                } : null,
+                details: productsWithNames
+            };
+        }));
+
+        return stocktakingsWithDetails;
+    } catch (error) {
+        throw new Error(`Error getting all stocktakings: ${error.message}`);
+    }
+}
+
 
 
 module.exports = {
@@ -608,5 +649,6 @@ module.exports = {
     updateBill,
     cancelBill,
     getAllTransaction,
-    addStocktaking
+    addStocktaking,
+    getAllStocktaking
 };
