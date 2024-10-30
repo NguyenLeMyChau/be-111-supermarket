@@ -7,6 +7,9 @@ const Unit = require('../models/Unit');
 const SupplierOrderHeader = require('../models/SupplierOrder_Header');
 const SupplierOrderDetail = require('../models/SupplierOrder_Detail');
 const TransactionInventory = require('../models/TransactionInventory');
+const StocktakingHeader = require('../models/Stocktaking_Header');
+const StocktakingDetail = require('../models/Stocktaking_Detail');
+
 
 const { validStatuses } = require('../utils/MappingStatus');
 const { sendOrderEmail } = require('./emailService');
@@ -520,6 +523,79 @@ const getAllTransaction = async () => {
     }
 };
 
+const addStocktaking = async (accountId, stocktakingId, reason, productList) => {
+    const session = await mongoose.startSession();
+    let transactionCommitted = false;
+
+    try {
+        session.startTransaction();
+
+        const stocktakingHeader = new StocktakingHeader({
+            account_id: accountId,
+            stocktaking_id: stocktakingId,
+            reason: reason
+        });
+
+        const savedStocktakingHeader = await stocktakingHeader.save({ session });
+
+        const stocktakingDetail = new StocktakingDetail({
+            stocktakingHeader_id: savedStocktakingHeader._id,
+            products: productList.map(product => ({
+                product_id: product.product_id,
+                unit_id: product.unit_id,
+                quantity_stock: product.quantity_stock,
+                quantity_actual: product.quantity_actual
+            }))
+        });
+
+        const savedStocktakingDetail = await stocktakingDetail.save({ session });
+
+        // Cập nhật stock_quantity trong warehouse
+        for (const product of productList) {
+            const warehouseItem = await Warehouse.findOne({
+                item_code: product.item_code,
+                unit_id: product.unit_id
+            }).session(session);
+
+            if (warehouseItem) {
+                warehouseItem.stock_quantity = product.quantity_actual;
+                await warehouseItem.save({ session });
+
+                // Tạo giao dịch ghi nhận
+                const transaction = new TransactionInventory({
+                    product_id: product.product_id,
+                    unit_id: product.unit_id,
+                    quantity: product.quantity_actual,
+                    type: 'Kiểm kê kho',
+                    stocktaking_id: savedStocktakingHeader._id,
+                });
+
+                await transaction.save({ session });
+            } else {
+                throw new Error(`Không tìm thấy sản phẩm với item_code: ${product.item_code} và unit_id: ${product.unit_id}`);
+            }
+        }
+
+        await session.commitTransaction();
+        transactionCommitted = true;
+
+        console.log('Stocktaking added successfully!');
+
+        return {
+            stocktakingHeader: savedStocktakingHeader,
+            stocktakingDetail: savedStocktakingDetail
+        };
+    } catch (error) {
+        if (!transactionCommitted) {
+            await session.abortTransaction();
+        }
+        console.error('Error adding stocktaking, transaction rolled back:', error);
+        throw new Error(`${error.message}`);
+    } finally {
+        session.endSession();
+    }
+}
+
 
 
 module.exports = {
@@ -531,5 +607,6 @@ module.exports = {
     getAllBill,
     updateBill,
     cancelBill,
-    getAllTransaction
+    getAllTransaction,
+    addStocktaking
 };
