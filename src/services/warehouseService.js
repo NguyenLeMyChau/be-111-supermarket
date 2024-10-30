@@ -7,6 +7,9 @@ const Unit = require('../models/Unit');
 const SupplierOrderHeader = require('../models/SupplierOrder_Header');
 const SupplierOrderDetail = require('../models/SupplierOrder_Detail');
 const TransactionInventory = require('../models/TransactionInventory');
+const StocktakingHeader = require('../models/Stocktaking_Header');
+const StocktakingDetail = require('../models/Stocktaking_Detail');
+
 
 const { validStatuses } = require('../utils/MappingStatus');
 const { sendOrderEmail } = require('./emailService');
@@ -228,7 +231,7 @@ const updateOrderStatus = async (orderId, newStatus, products) => {
     }
 };
 
-const addBillWarehouse = async (accountId, billId, productList) => {
+const addBillWarehouse = async (accountId, billId, description, productList) => {
 
     const session = await mongoose.startSession();
     let transactionCommitted = false;
@@ -245,6 +248,7 @@ const addBillWarehouse = async (accountId, billId, productList) => {
         const supplierOrderHeader = new SupplierOrderHeader({
             account_id: accountId,
             bill_id: billId,
+            description: description
         });
 
         const savedOrderHeader = await supplierOrderHeader.save({ session });
@@ -451,6 +455,65 @@ const updateBill = async (oldBillId, newBillId, productList) => {
     }
 };
 
+const cancelBill = async (billId, cancel_reason) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        // Step 1: Find SupplierOrderHeader by billId and update status to false
+        const header = await SupplierOrderHeader.findOne({ _id: billId }).session(session);
+        if (!header) {
+            throw new Error('Không tìm thấy đơn hàng với mã billId này.');
+        }
+        header.status = false;
+        header.cancel_reason = cancel_reason; // Thêm cancel_reason vào header
+        await header.save({ session });
+
+        // Step 2: Find SupplierOrderDetail by supplierOrderHeader_id
+        const details = await SupplierOrderDetail.findOne({ supplierOrderHeader_id: header._id }).session(session);
+        if (!details) {
+            throw new Error('Không tìm thấy chi tiết đơn hàng cho billId này.');
+        }
+
+        // Step 3: Update Warehouse and create new TransactionInventory
+        for (const product of details.products) {
+
+            const productFind = await Product.findById(product.product_id).lean();
+
+            const warehouse = await Warehouse.findOne({ item_code: productFind.item_code, unit_id: product.unit_id }).session(session);
+            if (!warehouse) {
+                throw new Error('Không tìm thấy kho hàng cho sản phẩm này.');
+            }
+
+            // Update warehouse stock
+            warehouse.stock_quantity -= product.quantity;
+            await warehouse.save({ session });
+
+            // Create new transaction with type 'Huỷ nhập phiếu'
+            const newTransaction = new TransactionInventory({
+                product_id: product.product_id,
+                unit_id: product.unit_id,
+                order_id: header._id,
+                quantity: product.quantity,
+                type: 'Huỷ phiếu nhập',
+            });
+            await newTransaction.save({ session });
+        }
+
+        // Commit transaction if no errors
+        await session.commitTransaction();
+        session.endSession();
+
+        return { message: 'Hủy đơn hàng thành công' };
+
+    } catch (error) {
+        // Rollback transaction if any error occurs
+        await session.abortTransaction();
+        session.endSession();
+        throw new Error(`Có lỗi xảy ra khi hủy đơn hàng: ${error.message}`);
+    }
+}
+
 const getAllTransaction = async () => {
     try {
         const transactions = await TransactionInventory.find().lean();
@@ -459,6 +522,79 @@ const getAllTransaction = async () => {
         throw new Error(`Error getting all transactions: ${error.message}`);
     }
 };
+
+const addStocktaking = async (accountId, stocktakingId, reason, productList) => {
+    const session = await mongoose.startSession();
+    let transactionCommitted = false;
+
+    try {
+        session.startTransaction();
+
+        const stocktakingHeader = new StocktakingHeader({
+            account_id: accountId,
+            stocktaking_id: stocktakingId,
+            reason: reason
+        });
+
+        const savedStocktakingHeader = await stocktakingHeader.save({ session });
+
+        const stocktakingDetail = new StocktakingDetail({
+            stocktakingHeader_id: savedStocktakingHeader._id,
+            products: productList.map(product => ({
+                product_id: product.product_id,
+                unit_id: product.unit_id,
+                quantity_stock: product.quantity_stock,
+                quantity_actual: product.quantity_actual
+            }))
+        });
+
+        const savedStocktakingDetail = await stocktakingDetail.save({ session });
+
+        // Cập nhật stock_quantity trong warehouse
+        for (const product of productList) {
+            const warehouseItem = await Warehouse.findOne({
+                item_code: product.item_code,
+                unit_id: product.unit_id
+            }).session(session);
+
+            if (warehouseItem) {
+                warehouseItem.stock_quantity = product.quantity_actual;
+                await warehouseItem.save({ session });
+
+                // Tạo giao dịch ghi nhận
+                const transaction = new TransactionInventory({
+                    product_id: product.product_id,
+                    unit_id: product.unit_id,
+                    quantity: product.quantity_actual,
+                    type: 'Kiểm kê kho',
+                    stocktaking_id: savedStocktakingHeader._id,
+                });
+
+                await transaction.save({ session });
+            } else {
+                throw new Error(`Không tìm thấy sản phẩm với item_code: ${product.item_code} và unit_id: ${product.unit_id}`);
+            }
+        }
+
+        await session.commitTransaction();
+        transactionCommitted = true;
+
+        console.log('Stocktaking added successfully!');
+
+        return {
+            stocktakingHeader: savedStocktakingHeader,
+            stocktakingDetail: savedStocktakingDetail
+        };
+    } catch (error) {
+        if (!transactionCommitted) {
+            await session.abortTransaction();
+        }
+        console.error('Error adding stocktaking, transaction rolled back:', error);
+        throw new Error(`${error.message}`);
+    } finally {
+        session.endSession();
+    }
+}
 
 
 
@@ -470,5 +606,7 @@ module.exports = {
     addBillWarehouse,
     getAllBill,
     updateBill,
-    getAllTransaction
+    cancelBill,
+    getAllTransaction,
+    addStocktaking
 };

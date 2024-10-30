@@ -1,4 +1,4 @@
-const { getAllWarehouse, getProductsByWarehouse, orderProductFromSupplier, updateOrderStatus, getAllOrders, getWarehousesFromSupplierId, addBillWarehouse, getAllBill, updateBill, getAllTransaction } = require("../services/warehouseService");
+const { getAllWarehouse, getProductsByWarehouse, orderProductFromSupplier, updateOrderStatus, getAllOrders, getWarehousesFromSupplierId, addBillWarehouse, getAllBill, updateBill, getAllTransaction, cancelBill, addStocktaking } = require("../services/warehouseService");
 
 
 async function getWarehouses(req, res) {
@@ -58,8 +58,8 @@ const updateOrderStatusController = async (req, res) => {
 
 const addBillWarehouseController = async (req, res) => {
     try {
-        const { accountId, billId, productList } = req.body;
-        const result = await addBillWarehouse(accountId, billId, productList);
+        const { accountId, billId, description, productList } = req.body;
+        const result = await addBillWarehouse(accountId, billId, description, productList);
         return res.status(200).json(result);
     } catch (error) {
         return res.status(500).json({ message: error.message });
@@ -85,9 +85,29 @@ const updateBillController = async (req, res) => {
     }
 }
 
+const cancelBillController = async (req, res) => {
+    try {
+        const { billId, cancel_reason } = req.body;
+        const result = await cancelBill(billId, cancel_reason);
+        return res.status(200).json(result);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+}
+
 const getAllTransactionController = async (req, res) => {
     try {
         const result = await getAllTransaction();
+        return res.status(200).json(result);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+}
+
+const addStocktakingController = async (req, res) => {
+    try {
+        const { accountId, stocktakingId, reason, productList } = req.body;
+        const result = await addStocktaking(accountId, stocktakingId, reason, productList);
         return res.status(200).json(result);
     } catch (error) {
         return res.status(500).json({ message: error.message });
@@ -103,5 +123,7 @@ module.exports = {
     addBillWarehouseController,
     getAllBillController,
     updateBillController,
-    getAllTransactionController
+    getAllTransactionController,
+    cancelBillController,
+    addStocktakingController
 };

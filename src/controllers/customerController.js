@@ -28,13 +28,13 @@ async function payCartController(req, res) {
             products,
             paymentMethod,
             paymentInfo,
-            
+
             paymentAmount } = req.body;
         const cart = await payCart(customerId,
             products,
             paymentMethod,
             paymentInfo,
-            
+
             paymentAmount);
         res.status(200).json(cart);
     } catch (error) {
@@ -121,5 +121,5 @@ module.exports = {
     updateCustomerInfoController,
     getInvoicesByAccountIdController,
     checkStockQuantityInCartController,
-    
+
 };

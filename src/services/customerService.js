@@ -45,7 +45,7 @@ async function getCartById(accountId) {
     }
 }
 
-async function addProductToCart(accountId, productId, quantity, total) {
+async function addProductToCart(accountId, productId, unitId, quantity, total) {
     try {
         // Tìm giỏ hàng của người dùng
         let cart = await Cart.findOne({ account_id: accountId });
@@ -53,13 +53,14 @@ async function addProductToCart(accountId, productId, quantity, total) {
             path: "productPriceHeader_id",
             match: { status: "active" }, // Only include active ProductPriceHeader
         });
+        
         // Nếu giỏ hàng chưa tồn tại, tạo giỏ hàng mới
         if (!cart) {
             cart = new Cart({ account_id: accountId, products: [] });
         }
 
         // Kiểm tra xem sản phẩm đã có trong giỏ hàng chưa
-        const productIndex = cart.products.findIndex(p => p.product_id.toString() === productId);
+        const productIndex = cart.products.findIndex(p => p.product_id.toString() === productId && p.unit_id.toString() === unitId);
 
         if (productIndex > -1) {
             // Nếu sản phẩm đã tồn tại, cập nhật số lượng sản phẩm và giá
@@ -68,7 +69,7 @@ async function addProductToCart(accountId, productId, quantity, total) {
             cart.products[productIndex].total = total;
         } else {
             // Nếu sản phẩm chưa tồn tại, thêm sản phẩm mới vào giỏ hàng
-            cart.products.push({ product_id: productId, quantity: quantity, price: priceInfo._id, total: total });
+            cart.products.push({ product_id: productId, unit_id: unitId, quantity: quantity, price: priceInfo._id, total: total });
         }
 
         // Lưu giỏ hàng
@@ -180,6 +181,7 @@ async function payCart(customerId, products, paymentMethod, paymentInfo, payment
                 product_id: item.product_id,
                 quantity: item.quantity,
                 type: 'Bán hàng',
+                order_customer_id: invoiceSaleHeader._id,
             });
             await transactionInventory.save({ session });
 
@@ -297,7 +299,7 @@ const getInvoicesByAccountId = async (accountId) => {
             // Duyệt qua products bên trong detail
             const productsWithInfo = await Promise.all(detail.products.map(async (item) => {
                 const product = await Product.findById(item.product).select('name img unit_id').lean();
-                const unit = await Unit.findById(product.unit_id).select('description').lean();
+                const unit = await Unit.findById(product?.unit_id).select('description').lean();
                 const promotionDetail = await PromotionDetail.findOne({ _id: item.promotion }).lean() || {};
                 let promotionLine = {};
 
