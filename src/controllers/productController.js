@@ -1,9 +1,9 @@
-const { getAllCategory, getAllProduct, getProductsBySupplierId, getProductsDetail, addCategory, updateCategory, addProductWithWarehouse, updateProduct, getAllProductsWithPriceAndPromotion, getAllProductsWithPriceAndPromotionNoCategory, getProductsByBarcodeInUnitConvert } = require("../services/productService");
+const { getAllCategory, getAllProduct, getProductsBySupplierId, getProductsDetail, addCategory, updateCategory, addProductWithWarehouse, updateProduct, getAllProductsWithPriceAndPromotion, getAllProductsWithPriceAndPromotionNoCategory, getProductsByBarcodeInUnitConvert, getAllCategoryWithPrice } = require("../services/productService");
 
 
 async function getCategories(req, res) {
     try {
-        const categories = await getAllCategory();
+        const categories = await getAllCategoryWithPrice();
         res.status(200).json(categories);
     } catch (error) {
         console.error(`Error get categories: ${error.message}`);

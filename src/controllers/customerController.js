@@ -13,8 +13,8 @@ async function getCartByIdController(req, res) {
 
 async function addProductToCartController(req, res) {
     try {
-        const { accountId, productId, quantity, total } = req.body;
-        const cart = await addProductToCart(accountId, productId, quantity, total);
+        const { accountId, productId,unitId, quantity, total } = req.body;
+        const cart = await addProductToCart(accountId, productId,unitId, quantity, total);
         res.status(200).json(cart);
     } catch (error) {
         console.error(`Error add product to cart: ${error.message}`);

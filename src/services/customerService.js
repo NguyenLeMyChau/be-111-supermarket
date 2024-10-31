@@ -9,51 +9,62 @@ const Unit = require('../models/Unit');
 const Customer = require('../models/Customer');
 const promotionService = require('./promotionService');
 const Warehouse = require('../models/Warehouse');
-const ProductPrice_Detail = require('../models/ProductPrice_Detail')
+const ProductPriceHeader = require('../models/ProductPrice_Header')
+const ProductPriceDetail = require('../models/ProductPrice_Detail')
 const PromotionDetail = require('../models/Promotion_Detail');
 const PromotionLine = require('../models/Promotion_Line');
 
 async function getCartById(accountId) {
     try {
-        const cart = await Cart.findOne({ account_id: accountId });
-        const products = cart.products;
+        const cart = await Cart.findOne({ account_id: accountId })
+            .populate('products.product_id') // populate sản phẩm trong giỏ hàng
+            .populate('products.unit_id'); // populate đơn vị sản phẩm
 
+        if (!cart) {
+            throw new Error(`Cart not found for account ID: ${accountId}`);
+        }
+
+        const products = cart.products;
+        
         // Lấy thông tin sản phẩm từ product_id
         const productsWithDetails = await Promise.all(products.map(async (product) => {
-            const productInfo = await Product.findById(product.product_id).select('name img unit_id item_code').lean();
-
-            const unitInfo = productInfo ? await Unit.findById(productInfo.unit_id).lean() : null;
-
-            const priceInfo = await ProductPrice_Detail.findOne({ product_id: product.product_id }).populate({
-                path: "productPriceHeader_id",
-                match: { status: "active" }, // Only include active ProductPriceHeader
-            }) || 0;
+            const image = product.product_id.unit_convert.find((unit) => unit.unit.equals(product.unit_id._id));
+console.log(product)
             return {
-                product_id: product.product_id,
-                name: productInfo ? productInfo.name : null,
-                item_code: productInfo ? productInfo.item_code : null,
-                img: productInfo ? productInfo.img : null,
+                product_id: product.product_id._id,
+                name: product.product_id.name || null, // lấy tên sản phẩm
+                item_code: product.product_id.item_code || null, // lấy mã sản phẩm
+                img: image?.img,
                 quantity: product.quantity,
-                price: priceInfo.price,
-                unit: unitInfo,
+                price: product.price,
+                unit: product.unit_id,
                 total: product.total,
             };
         }));
+
         return productsWithDetails;
     } catch (err) {
         throw new Error(`Error getting cart: ${err.message}`);
     }
 }
 
+
 async function addProductToCart(accountId, productId, unitId, quantity, total) {
     try {
+        console.log(accountId, productId, unitId, quantity, total)
         // Tìm giỏ hàng của người dùng
+        let product = await Product.findById(productId)
+        console.log(product)
         let cart = await Cart.findOne({ account_id: accountId });
-        let priceInfo = await ProductPrice_Detail.findOne({ product_id: productId }).populate({
+        let priceInfo = await ProductPriceDetail.findOne({ 
+            item_code: product.item_code, 
+            unit_id: unitId 
+        }).
+        populate({
             path: "productPriceHeader_id",
             match: { status: "active" }, // Only include active ProductPriceHeader
         });
-        
+        console.log(priceInfo)
         // Nếu giỏ hàng chưa tồn tại, tạo giỏ hàng mới
         if (!cart) {
             cart = new Cart({ account_id: accountId, products: [] });
@@ -88,8 +99,8 @@ async function updateCart(accountId, productList) {
 
         // Duyệt qua danh sách sản phẩm và cập nhật giá
         for (let product of productList) {
-            // Tìm giá theo product._id từ ProductPrice_Detail
-            let priceInfo = await ProductPrice_Detail.findOne({ product_id: product.product_id }).populate({
+            // Tìm giá theo product._id từ ProductPriceDetail
+            let priceInfo = await ProductPriceDetail.findOne({ product_id: product.product_id }).populate({
                 path: "productPriceHeader_id",
                 match: { status: "active" }, // Only include active ProductPriceHeader
             });
