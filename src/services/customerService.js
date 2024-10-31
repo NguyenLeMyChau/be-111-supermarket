@@ -18,8 +18,8 @@ async function getCartById(accountId) {
     try {
         const cart = await Cart.findOne({ account_id: accountId })
             .populate('products.product_id') // populate sản phẩm trong giỏ hàng
-            .populate('products.unit_id'); // populate đơn vị sản phẩm
-
+            .populate('products.unit_id') // populate đơn vị sản phẩm
+            .populate('products.price');
         if (!cart) {
             throw new Error(`Cart not found for account ID: ${accountId}`);
         }
@@ -31,7 +31,7 @@ async function getCartById(accountId) {
             const image = product.product_id.unit_convert.find((unit) => unit.unit.equals(product.unit_id._id));
 console.log(product)
             return {
-                product_id: product.product_id._id,
+                product_id: product.product_id,
                 name: product.product_id.name || null, // lấy tên sản phẩm
                 item_code: product.product_id.item_code || null, // lấy mã sản phẩm
                 img: image?.img,
