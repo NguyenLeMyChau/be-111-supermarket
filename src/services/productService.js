@@ -7,6 +7,22 @@ const PromotionHeader = require("../models/Promotion_Header");
 const ProductPriceDetail = require("../models/ProductPrice_Detail");
 const PromotionLine = require("../models/Promotion_Line");
 const PromotionDetail = require("../models/Promotion_Detail");
+async function getActivePromotionLinesForToday() {
+  try {
+    const today = new Date();
+    
+    // Query for active promotions where today's date is between startDate and endDate
+    const activePromotions = await PromotionLine.find({
+      status: 'active',
+      startDate: { $lte: today },
+      endDate: { $gte: today },
+    });
+
+    return activePromotions;
+  } catch (err) {
+    throw new Error(`Error finding active promotions: ${err.message}`);
+  }
+}
 
 async function getAllCategory() {
   try {
@@ -313,13 +329,15 @@ async function getAllProductsWithPriceAndPromotion() {
 
     // Lấy tất cả PromotionHeader đang hoạt động
     const activePromotionHeaders = await PromotionHeader.find();
-
+    const today = new Date(); 
     // Lấy tất cả PromotionLine có liên kết với PromotionHeader đang hoạt động
     const activePromotionLines = await PromotionLine.find({
       promotionHeader_id: {
         $in: activePromotionHeaders.map((header) => header._id),
       },
       status: 'active',
+      startDate: { $lte: today },
+      endDate: { $gte: today },
     });
 
     // Lấy tất cả PromotionDetail đang hoạt động dựa trên promotionLine_id
@@ -424,26 +442,16 @@ async function getAllProductsWithPriceAndPromotion() {
 
 async function getAllProductsWithPriceAndPromotionNoCategory() {
   try {
-    // Filter ProductPriceDetail to only get records with active ProductPriceHeader
+    // Filter ProductPriceDetail to get only records with active ProductPriceHeader
     const productPrices = await ProductPriceDetail.find({
-      productPriceHeader_id: { $ne: null }, // Skip records without a linked ProductPriceHeader
+      productPriceHeader_id: { $ne: null }, // Exclude records without a linked ProductPriceHeader
     })
-      .populate({
-        path: "product_id",
-        populate: [
-          {
-            path: "unit_id",
-            model: "unit",
-          },
-          {
-            path: "category_id",
-            model: "category",
-          },
-        ],
-      })
       .populate({
         path: "productPriceHeader_id",
         match: { status: "active" }, // Only include active ProductPriceHeader
+      })
+      .populate({
+        path: 'unit_id'
       });
 
     // Filter out invalid records (remove those with a null productPriceHeader_id)
@@ -452,85 +460,98 @@ async function getAllProductsWithPriceAndPromotionNoCategory() {
     );
 
     // Get all active PromotionHeader
-    const activePromotionHeaders = await PromotionHeader.find({
-      isActive: true,
-    });
-
+    const activePromotionHeaders = await PromotionHeader.find();
+    const today = new Date();
     // Get all active PromotionLine linked to active PromotionHeader
     const activePromotionLines = await PromotionLine.find({
       promotionHeader_id: {
         $in: activePromotionHeaders.map((header) => header._id),
       },
-      isActive: true,
+      status: 'active',
+      startDate: { $lte: today },
+      endDate: { $gte: today },
     });
 
     // Get all active PromotionDetail based on promotionLine_id
     const activePromotionDetails = await PromotionDetail.find({
       promotionLine_id: { $in: activePromotionLines.map((line) => line._id) },
-    }).populate("product_id product_donate");
+    }).populate("product_id product_donate unit_id unit_id_donate");
 
-    // Create a list of products with their prices and promotions
-    const productsList = filteredProductPrices.map((priceDetail) => {
-      const product = priceDetail.product_id;
+    // Array to store item codes to find products
+    const itemCodes = filteredProductPrices.map(priceDetail => priceDetail.item_code);
+    
+    // Get all products related to item_code
+    const products = await Product.find({ item_code: { $in: itemCodes } }).populate("category_id");
+
+    // Initialize product list
+    const productsList = [];
+
+    // Loop through each productPrice to classify by category
+    for (const priceDetail of filteredProductPrices) {
+      const product = products.find(p => p.item_code === priceDetail.item_code);
       let promotions = [];
 
-      // Find promotions applicable to the current product
-      activePromotionHeaders.forEach((promoHeader) => {
-        activePromotionLines
-          .filter((line) => line.promotionHeader_id.equals(promoHeader._id))
-          .forEach((promoLine) => {
-            activePromotionDetails
-              .filter((detail) => detail.promotionLine_id.equals(promoLine._id))
-              .forEach((promoDetail) => {
-                if (
-                  promoDetail.product_id &&
-                  promoDetail.product_id.equals(product._id)
-                ) {
-                  promotions.push({
-                    header: promoHeader.description,
-                    line: promoLine.description,
-                    type: promoLine.type,
-                    startDate: promoLine.startDate,
-                    endDate: promoLine.endDate,
-                    percent: promoDetail.percent,
-                    amount_sales: promoDetail.amount_sales,
-                    product_donate: promoDetail.product_donate,
-                    quantity_donate: promoDetail.quantity_donate,
-                    product_id: promoDetail.product_id,
-                    quantity: promoDetail.quantity,
-                    amount_donate: promoDetail.amount_donate,
-                    amount_limit: promoDetail.amount_limit,
-                  });
-                }
-              });
-          });
-      });
+      if (product) {
+        // Find promotions applicable to the current product
+        for (const promoHeader of activePromotionHeaders) {
+          const promoLines = activePromotionLines.filter(line => line.promotionHeader_id.equals(promoHeader._id));
 
-      // Construct the product data
-      return {
-        _id: product._id,
-        name: product.name,
-        item_code: product.item_code,
-        category_id: product.category_id._id,
-        barcode: product.barcode,
-        unit_id: product.unit_id,
-        img: product.img,
-        price: priceDetail.price,
-        priceDetail: priceDetail,
-        promotions: promotions,
-      };
-    });
+          for (const promoLine of promoLines) {
+            const promoDetails = activePromotionDetails.filter(detail => detail.promotionLine_id.equals(promoLine._id));
+
+            for (const promoDetail of promoDetails) {
+              if (
+                (promoDetail.product_id && promoDetail.product_id.equals(product._id) && promoDetail.unit_id.equals(priceDetail.unit_id._id)) ||
+                (promoDetail.product_donate && promoDetail.product_donate.equals(product._id) && promoDetail.unit_id_donate.equals(priceDetail.unit_id._id))
+              ) {
+                promotions.push({
+                  header: promoHeader.description,
+                  line: promoLine.description,
+                  type: promoLine.type,
+                  startDate: promoLine.startDate,
+                  endDate: promoLine.endDate,
+                  percent: promoDetail.percent,
+                  amount_sales: promoDetail.amount_sales,
+                  product_donate: promoDetail.product_donate,
+                  unit_id_donate: promoDetail.unit_id_donate,
+                  quantity_donate: promoDetail.quantity_donate,
+                  product_id: promoDetail.product_id,
+                  unit_id: promoDetail.unit_id,
+                  quantity: promoDetail.quantity,
+                  amount_donate: promoDetail.amount_donate,
+                  amount_limit: promoDetail.amount_limit,
+                  description: promoDetail.description,
+                });
+              }
+            }
+          }
+        }
+
+        // Construct the product data
+        productsList.push({
+          _id: product._id,
+          name: product.name,
+          item_code: product.item_code,
+          category_id: product.category_id ? product.category_id._id : null,
+          barcode: product.barcode,
+          unit_id: priceDetail.unit_id,
+          img: product.img,
+          price: priceDetail.price,
+          priceDetail: priceDetail,
+          promotions: promotions,
+        });
+      }
+    }
 
     // Sort products by the number of promotions in descending order
     productsList.sort((a, b) => b.promotions.length - a.promotions.length);
 
     return productsList; // Return the list of products
   } catch (err) {
-    throw new Error(
-      `Error getting products with price and promotions: ${err.message}`
-    );
+    throw new Error(`Error getting products with price and promotions: ${err.message}`);
   }
 }
+
 
 async function getProductsByBarcodeInUnitConvert(barcode) {
   try {

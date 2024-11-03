@@ -4,6 +4,24 @@ const PromotionDetail = require('../models/Promotion_Detail');
 const Product = require('../models/Product');
 const Unit = require('../models/Unit');
 
+async function getActivePromotionLinesForToday() {
+    try {
+      const today = new Date();
+      
+      // Query for active promotions where today's date is between startDate and endDate
+      const activePromotions = await PromotionLine.find({
+        status: 'active',
+        startDate: { $lte: today },
+        endDate: { $gte: today },
+      });
+  
+      return activePromotions;
+    } catch (err) {
+      throw new Error(`Error finding active promotions: ${err.message}`);
+    }
+  }
+
+  
 async function getAllPromotion() {
     try {
         const promotionHeaders = await PromotionHeader.find();
