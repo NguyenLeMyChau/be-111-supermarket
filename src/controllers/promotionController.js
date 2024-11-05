@@ -121,11 +121,11 @@ const updatePromotionDetail = async (req, res) => {
 const getPromotionsByProductIdsController = async (req, res) => {
     try {
       // Lấy danh sách productIds từ body của request
-      const { product_id } = req.body;
+      const { product_id,unit_id } = req.body;
       
   
       // Gọi service để lấy thông tin khuyến mãi
-      const promotions = await promotionService.getPromotionByProductId(product_id);
+      const promotions = await promotionService.getPromotionByProductId(product_id,unit_id);
   
       // Trả về danh sách khuyến mãi
       return res.status(200).json(promotions);
@@ -155,7 +155,7 @@ const getPromotionsByProductIdsController = async (req, res) => {
   };
   async function getPromotionsActive(req, res) {
     try {
-        const promotions = await promotionService.getAllPromotionACtive();
+        const promotions = await promotionService.getAllPromotionActive();
         res.status(200).json(promotions);
     } catch (error) {
         console.error(`Error get products: ${error.message}`);

@@ -5,6 +5,7 @@ const invoiceSaleDetailSchema = new mongoose.Schema({
     invoiceSaleHeader_id: { type: mongoose.Schema.Types.ObjectId, ref: 'invoiceSale_header', required: true },
     products:[{
         product: { type: mongoose.Schema.Types.ObjectId, ref: 'product', required: true },
+        unit_id: { type: mongoose.Schema.Types.ObjectId, ref: 'unit' },
         quantity: { type: Number, required: true },
         price: {  type: Number},
         promotion : { type: mongoose.Schema.Types.ObjectId, ref: 'promotion_detail'}

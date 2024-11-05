@@ -552,15 +552,51 @@ async function getAllProductsWithPriceAndPromotionNoCategory() {
   }
 }
 
-
 async function getProductsByBarcodeInUnitConvert(barcode) {
   try {
-    const products = await Product.find({ "unit_convert.barcode": barcode });
-    return products;
+    // Tìm sản phẩm theo mã vạch
+    const product = await Product.findOne({ 'unit_convert.barcode': barcode }).populate('unit_convert.unit');
+
+    if (!product) {
+      return { message: 'Không tìm thấy sản phẩm.' };
+    }
+
+    // Tìm giá sản phẩm dựa trên item_code hoặc một trường phù hợp khác
+    const productPriceDetails = await ProductPriceDetail.find({
+      item_code: product.item_code // hoặc có thể dùng trường khác để tìm
+    }).populate('unit_id'); // populate để lấy tên đơn vị, nếu cần
+    console.log(productPriceDetails)
+    if (productPriceDetails.length > 0) {
+      const priceMap = {};
+      productPriceDetails.forEach(detail => {
+        priceMap[detail.unit_id._id.toString()] = detail.price; // Sử dụng ID của đơn vị làm khóa
+        
+      });
+    
+      return {
+      
+          _id: product._id,
+          name: product.name,
+          barcode: product.unit_convert.find((unit) => unit.barcode === barcode).barcode,
+          unit_id:product.unit_convert.find((unit) => unit.barcode === barcode).unit,
+          img: product.img,
+        
+          unit_converts: product.unit_convert.map(unit => ({
+            unit: unit.unit,
+            quantity: unit.quantity,
+            barcode: unit.barcode,
+            img: unit.img,
+            checkBaseUnit: unit.checkBaseUnit,
+            price: priceMap[unit.unit._id.toString()] || null // Lấy giá từ priceMap, nếu không có thì trả về null
+          })),
+       
+      };
+    }    
   } catch (err) {
-    throw new Error(`Error getting products by barcode in unit_convert: ${err.message}`);
+    throw new Error(`Không tìm thấy sản phẩm: ${err.message}`);
   }
 }
+
 module.exports = {
   getAllCategory,
   addCategory,

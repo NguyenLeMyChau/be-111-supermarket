@@ -4,6 +4,8 @@ const authController = require('../controllers/authController');
 const productController = require('../controllers/productController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const promotionController = require('../controllers/promotionController');
+const customerController = require('../controllers/customerController');
+
 
 // Đăng ký nhân viên
 router.post('/register-employee', authMiddleware(['manager']), authController.register);
@@ -35,5 +37,7 @@ router.post('/get-promotion-by-product',promotionController.getPromotionsByProdu
 router.get('/get-promotions', promotionController.getPromotionsActive);
 
 router.post('/get-product-by-barcode',productController.getProductsByBarcodeInUnitConvertController)
+
+router.post('/pay-cart-web', customerController.payCartWebController);
 
 module.exports = router;

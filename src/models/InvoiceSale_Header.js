@@ -9,11 +9,11 @@ const addressSchema = new mongoose.Schema({
 });
 
 const invoiceSaleHeaderSchema = new mongoose.Schema({
-    customer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'account', required: true },
+    customer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'account',trim: true },
     paymentInfo: {
-        name: { type: String, required: true, trim: true },
+        name: { type: String, trim: true },
         address: { type: addressSchema },
-        phone: { type: String, required: true, trim: true },
+        phone: { type: String, trim: true },
         gender: { type: Boolean, trim: true }
     },
     paymentMethod: { type: String, required: true },

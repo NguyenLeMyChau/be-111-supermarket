@@ -110,7 +110,7 @@ async function getAllProductsWithPriceAndPromotionNoCategoryController(req, res)
 async function getProductsByBarcodeInUnitConvertController(req, res) {
     try {
         const {barcode} = req.body;
-        
+       
         const products = await getProductsByBarcodeInUnitConvert(barcode);
         res.status(200).json(products);
     } catch (error) {
@@ -118,6 +118,7 @@ async function getProductsByBarcodeInUnitConvertController(req, res) {
         res.status(400).json({ message: error.message });
     }
 }
+
 module.exports = {
     getCategories,
     addCategoryController,

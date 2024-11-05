@@ -218,31 +218,38 @@ const updatePromotionDetail = async (id, promotionDetailData) => {
     }
 };
 
-const getPromotionByProductId = async (productId) => {
+const getPromotionByProductId = async (productId, unit_id) => {
     try {
-      // Tìm chi tiết khuyến mãi cho product_id hoặc product_donate đã cho, với điều kiện promotionLine và promotionHeader isActive === true
+      const today = new Date();
+  
+      // Tìm chi tiết khuyến mãi cho product_id hoặc product_donate với unit_id
       const promotions = await PromotionDetail.find({
-        $or: [{ product_id: productId }, { product_donate: productId }] // Tìm các khuyến mãi có product_id hoặc product_donate bằng với productId
-      })
+        $or: [
+          { product_id: productId, unit_id: unit_id },
+          { product_donate: productId, unit_id_donate: unit_id }
+        ]
+      }).populate('unit_id')
+      .populate('unit_id_donate')
         .populate({
           path: 'promotionLine_id',
-          match: { isActive: true }, // Điều kiện isActive === true cho promotionLine
-          select: 'description startDate endDate isActive type',
+          match: {
+            status: 'active',
+            startDate: { $lte: today }, // Ngày bắt đầu phải nhỏ hơn hoặc bằng hôm nay
+            endDate: { $gte: today }     // Ngày kết thúc phải lớn hơn hoặc bằng hôm nay
+          },
           populate: {
             path: 'promotionHeader_id',
-            match: { isActive: true }, // Điều kiện isActive === true cho promotionHeader
-            select: 'description startDate endDate isActive',
-          },
-        })
-        .exec();
+            match: { isActive: true } // Chỉ lấy các PromotionHeader đang hoạt động
+          }
+          
+        });
   
-      // Lọc ra các khuyến mãi hợp lệ, nơi promotionLine và promotionHeader không bị null (đảm bảo isActive === true)
+      // Lọc ra các khuyến mãi hợp lệ
       const validPromotions = promotions.filter(
         (promotion) =>
           promotion.promotionLine_id && promotion.promotionLine_id.promotionHeader_id
       );
   
-      // Trả về các khuyến mãi hợp lệ
       return validPromotions;
     } catch (error) {
       console.error('Lỗi khi lấy thông tin khuyến mãi theo Product ID:', error);
@@ -279,34 +286,44 @@ const getPromotionByProductId = async (productId) => {
         throw error;
     }
 }; 
-async function getAllPromotionACtive() {
+async function getAllPromotionActive() {
     try {
-        // Tìm chi tiết khuyến mãi cho product_id đã cho, với điều kiện promotionLine và promotionHeader isActive === true
-        const promotions = await PromotionDetail.find() // Tìm các khuyến mãi có product_id bằng với productId
-          .populate({
-            path: 'promotionLine_id',
-            match: { isActive: true }, // Điều kiện isActive === true cho promotionLine
-            select: 'description startDate endDate isActive type',
-            populate: {
-              path: 'promotionHeader_id',
-              match: { isActive: true }, // Điều kiện isActive === true cho promotionHeader
-              select: 'description startDate endDate isActive',
+      const currentDate = new Date();
+  
+      // Find promotion details with active promotionLine and promotionHeader, within valid dates
+      const promotions = await PromotionDetail.find()
+        .populate({
+          path: 'promotionLine_id',
+          match: {
+            status: 'active',
+            startDate: { $lte: currentDate }, // promotionLine start date should be on or before current date
+            endDate: { $gte: currentDate } // promotionLine end date should be on or after current date
+          },
+          select: 'description startDate endDate isActive type',
+          populate: {
+            path: 'promotionHeader_id',
+            match: {
+              isActive: true,
+              startDate: { $lte: currentDate }, // promotionHeader start date should be on or before current date
+              endDate: { $gte: currentDate } // promotionHeader end date should be on or after current date
             },
-          })
-          .exec();
-    
-        // Lọc ra các khuyến mãi hợp lệ, nơi promotionLine và promotionHeader không bị null (đảm bảo isActive === true)
-        const validPromotions = promotions.filter(promotion =>
-          promotion.promotionLine_id && promotion.promotionLine_id.promotionHeader_id
-        );
-    
-        // Trả về các khuyến mãi hợp lệ
-        return validPromotions;
-      } catch (error) {
-        console.error('Lỗi khi lấy thông tin khuyến mãi theo Product ID:', error);
-        throw error;
-      }
-    };
+            select: 'description startDate endDate isActive'
+          }
+        })
+        .exec();
+  
+      // Filter promotions where both promotionLine and promotionHeader are non-null (ensuring they meet the active and date criteria)
+      const validPromotions = promotions.filter(promotion =>
+        promotion.promotionLine_id && promotion.promotionLine_id.promotionHeader_id
+      );
+  
+      return validPromotions;
+    } catch (error) {
+      console.error('Error retrieving active promotions:', error);
+      throw error;
+    }
+  };
+  
     const deletePromotionHeader = async (promotionHeaderId) => {
         const messages = [];
         try {
@@ -404,7 +421,7 @@ module.exports = {
     updatePromotionDetail,
     getPromotionByProductId,
     getPromotionByVoucher,
-    getAllPromotionACtive,
+    getAllPromotionActive,
     deletePromotionHeader,
     deletePromotionLine,
     deletePromotionDetail
