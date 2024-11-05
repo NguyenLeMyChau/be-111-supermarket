@@ -10,7 +10,7 @@ const PromotionDetail = require("../models/Promotion_Detail");
 async function getActivePromotionLinesForToday() {
   try {
     const today = new Date();
-    
+
     // Query for active promotions where today's date is between startDate and endDate
     const activePromotions = await PromotionLine.find({
       status: 'active',
@@ -92,7 +92,7 @@ async function getAllProduct() {
   try {
     const products = await Product.find()
       .populate("unit_id", "description")
-      .populate("unit_convert.unit", "description"); 
+      .populate("unit_convert.unit", "description");
     return products;
   } catch (err) {
     throw new Error(`Error getting all products: ${err.message}`);
@@ -224,7 +224,7 @@ const addProductWithWarehouse = async (productData) => {
 };
 
 const updateProduct = async (productId, productData) => {
-  const session = await mongoose.startSession(); // Nếu bạn đang sử dụng session cho transaction
+  const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
@@ -233,11 +233,10 @@ const updateProduct = async (productId, productData) => {
       throw new Error("Product not found");
     }
 
-    const { item_code, unit_convert } = productData;
+    const { item_code, unit_convert: incomingUnits } = productData;
 
     // Bước 1: Kiểm tra xem sản phẩm với cùng item_code và unit_id đã tồn tại chưa
     const existingProduct = await Product.findOne({ item_code }).session(session);
-
     if (
       existingProduct &&
       existingProduct._id.toString() !== productId.toString()
@@ -246,14 +245,51 @@ const updateProduct = async (productId, productData) => {
     }
 
     // Bước 2: Cập nhật thông tin sản phẩm
-    product.set(productData);
+    const existingUnits = product.unit_convert || [];
+    const incomingUnitIds = incomingUnits.map(unit => unit.unit.toString());
+
+    // Step 2: Mark units not in incoming data as inactive
+    for (const existingUnit of existingUnits) {
+      if (!incomingUnitIds.includes(existingUnit.unit.toString())) {
+        existingUnit.status = false;
+      }
+    }
+
+    // Step 3: Update or add units from incoming data
+    incomingUnits.forEach(incomingUnit => {
+      const matchingUnitIndex = existingUnits.findIndex(
+        unit => unit.unit.toString() === incomingUnit.unit.toString()
+      );
+
+      if (matchingUnitIndex !== -1) {
+        // Nếu đơn vị đã tồn tại và bị gắn false, chuyển thành true
+        if (!existingUnits[matchingUnitIndex].status) {
+          existingUnits[matchingUnitIndex].status = true; // Đổi thành true
+        }
+
+        // Cập nhật thông tin cho đơn vị hiện tại
+        existingUnits[matchingUnitIndex] = {
+          ...existingUnits[matchingUnitIndex],
+          ...incomingUnit
+        };
+      } else {
+        // Thêm mới đơn vị nếu không tồn tại
+        existingUnits.push(incomingUnit);
+      }
+    });
+
+    // Step 4: Assign the merged unit_convert array to the product
+    product.unit_convert = existingUnits;
+
+    // Update other product fields
+    product.set({ ...productData, unit_convert: existingUnits });
 
     // Bước 3: Kiểm tra và cập nhật unit_id nếu checkBaseUnit là true
     let baseUnitId = null;
     let baseUnitBarcode = null;
     let baseUnitImg = null;
-    if (unit_convert && Array.isArray(unit_convert)) {
-      const baseUnits = unit_convert.filter(unit => unit.checkBaseUnit === true);
+    if (incomingUnits && Array.isArray(incomingUnits)) {
+      const baseUnits = incomingUnits.filter(unit => unit.checkBaseUnit === true);
       if (baseUnits.length === 0) {
         throw new Error("Phải có 1 đơn vị cơ bản được chọn");
       }
@@ -279,7 +315,7 @@ const updateProduct = async (productId, productData) => {
     product.img = baseUnitImg;
 
     // Bước 4: Cập nhật thông tin trong unit_convert và Warehouse
-    for (const unit of unit_convert) {
+    for (const unit of incomingUnits) {
       const existingUnitWarehouse = await Warehouse.findOne({ item_code: item_code, unit_id: unit.unit }).session(session);
 
       if (!existingUnitWarehouse) {
@@ -310,6 +346,7 @@ const updateProduct = async (productId, productData) => {
   }
 };
 
+
 async function getAllProductsWithPriceAndPromotion() {
   try {
     // Lọc ProductPriceDetail chỉ lấy những bản ghi có ProductPriceHeader đang hoạt động
@@ -329,7 +366,7 @@ async function getAllProductsWithPriceAndPromotion() {
 
     // Lấy tất cả PromotionHeader đang hoạt động
     const activePromotionHeaders = await PromotionHeader.find();
-    const today = new Date(); 
+    const today = new Date();
     // Lấy tất cả PromotionLine có liên kết với PromotionHeader đang hoạt động
     const activePromotionLines = await PromotionLine.find({
       promotionHeader_id: {
@@ -350,7 +387,7 @@ async function getAllProductsWithPriceAndPromotion() {
 
     // Mảng để lưu trữ item codes để tìm sản phẩm
     const itemCodes = filteredProductPrices.map(priceDetail => priceDetail.item_code);
-    
+
     // Lấy tất cả sản phẩm liên quan đến item_code
     const products = await Product.find({ item_code: { $in: itemCodes } }).populate("category_id");
 
@@ -368,7 +405,7 @@ async function getAllProductsWithPriceAndPromotion() {
             const promoDetails = activePromotionDetails.filter(detail => detail.promotionLine_id.equals(promoLine._id));
 
             for (const promoDetail of promoDetails) {
-              if ((promoDetail.product_id && promoDetail.product_id.equals(product._id))&&(promoDetail.unit_id && promoDetail.unit_id.equals(priceDetail.unit_id._id))||(promoDetail.product_donate && promoDetail.product_donate.equals(product._id))&&(promoDetail.unit_id_donate && promoDetail.unit_id_donate.equals(priceDetail.unit_id._id))) {
+              if ((promoDetail.product_id && promoDetail.product_id.equals(product._id)) && (promoDetail.unit_id && promoDetail.unit_id.equals(priceDetail.unit_id._id)) || (promoDetail.product_donate && promoDetail.product_donate.equals(product._id)) && (promoDetail.unit_id_donate && promoDetail.unit_id_donate.equals(priceDetail.unit_id._id))) {
                 promotions.push({
                   header: promoHeader.description,
                   line: promoLine.description,
@@ -378,15 +415,15 @@ async function getAllProductsWithPriceAndPromotion() {
                   percent: promoDetail.percent,
                   amount_sales: promoDetail.amount_sales,
                   product_donate: promoDetail.product_donate,
-                  unit_id_donate:promoDetail.unit_id_donate,
+                  unit_id_donate: promoDetail.unit_id_donate,
                   quantity_donate: promoDetail.quantity_donate,
                   product_id: promoDetail.product_id,
-                  unit_id:promoDetail.unit_id,
+                  unit_id: promoDetail.unit_id,
                   quantity: promoDetail.quantity,
                   amount_donate: promoDetail.amount_donate,
                   amount_limit: promoDetail.amount_limit,
-                  description:promoDetail.description,
-                  
+                  description: promoDetail.description,
+
                 });
               }
             }
@@ -396,7 +433,7 @@ async function getAllProductsWithPriceAndPromotion() {
         // Lấy danh mục của sản phẩm
         const categoryId = product.category_id._id.toString();
         const image = product.unit_convert.find((unit) => unit.unit.equals(priceDetail.unit_id._id));
-      
+
         const productData = {
           _id: product._id,
           name: product.name,
@@ -408,7 +445,7 @@ async function getAllProductsWithPriceAndPromotion() {
           price: priceDetail.price,
           priceDetail: priceDetail,
           promotions: promotions,
-          unit_convert:product.unit_convert,
+          unit_convert: product.unit_convert,
         };
 
         // Nếu danh mục chưa có trong đối tượng, khởi tạo mảng
@@ -479,7 +516,7 @@ async function getAllProductsWithPriceAndPromotionNoCategory() {
 
     // Array to store item codes to find products
     const itemCodes = filteredProductPrices.map(priceDetail => priceDetail.item_code);
-    
+
     // Get all products related to item_code
     const products = await Product.find({ item_code: { $in: itemCodes } }).populate("category_id");
 

@@ -25,11 +25,11 @@ async function getCartById(accountId) {
         }
 
         const products = cart.products;
-        
+
         // Lấy thông tin sản phẩm từ product_id
         const productsWithDetails = await Promise.all(products.map(async (product) => {
             const image = product.product_id.unit_convert.find((unit) => unit.unit.equals(product.unit_id._id));
-console.log(product)
+            console.log(product)
             return {
                 product_id: product.product_id,
                 name: product.product_id.name || null, // lấy tên sản phẩm
@@ -56,14 +56,14 @@ async function addProductToCart(accountId, productId, unitId, quantity, total) {
         let product = await Product.findById(productId)
         console.log(product)
         let cart = await Cart.findOne({ account_id: accountId });
-        let priceInfo = await ProductPriceDetail.findOne({ 
-            item_code: product.item_code, 
-            unit_id: unitId 
+        let priceInfo = await ProductPriceDetail.findOne({
+            item_code: product.item_code,
+            unit_id: unitId
         }).
-        populate({
-            path: "productPriceHeader_id",
-            match: { status: "active" }, // Only include active ProductPriceHeader
-        });
+            populate({
+                path: "productPriceHeader_id",
+                match: { status: "active" }, // Only include active ProductPriceHeader
+            });
         console.log(priceInfo)
         // Nếu giỏ hàng chưa tồn tại, tạo giỏ hàng mới
         if (!cart) {
@@ -338,13 +338,13 @@ const removeProductCart = async (accountId, productId) => {
         return { success: false, message: error.message };
     }
 }
-const updateProductCart = async (accountId, productId, quantity) => {
+const updateProductCart = async (accountId, productId, unitId, quantity) => {
     try {
         // Tìm giỏ hàng của người dùng
         let cart = await Cart.findOne({ account_id: accountId });
 
         // Cập nhật số lượng sản phẩm trong giỏ hàng
-        const productIndex = cart.products.findIndex(p => p.product_id.toString() === productId);
+        const productIndex = cart.products.findIndex(p => p.product_id.toString() === productId && p.unit_id.toString() === unitId);
 
         if (productIndex > -1) {
             cart.products[productIndex].quantity = quantity;

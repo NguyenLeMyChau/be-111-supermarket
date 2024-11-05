@@ -6,7 +6,8 @@ const unitConvertSchema = new mongoose.Schema({
   quantity: { type: Number, required: true },
   barcode: { type: String, trim: true, default: null },
   img: { type: String, trim: true },
-  checkBaseUnit: { type: Boolean, default: false }
+  checkBaseUnit: { type: Boolean, default: false },
+  status: { type: Boolean, default: true }
 }, { _id: false });
 
 const productSchema = new mongoose.Schema({
