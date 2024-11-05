@@ -488,7 +488,23 @@ const checkStockQuantityInCart = async (item_code, quantity) => {
         throw new Error(`Error checking stock quantity: ${error.message}`);
     }
 };
-
+async function getCustomerByPhone(phone) {
+    try {
+      // Find the customer by phone number
+      const customer = await Customer.findOne({ phone });
+  
+      // Check if customer was found
+      if (!customer) {
+        throw new Error("Khách hàng chưa được đăng ký");
+      }
+  
+      return customer;
+    } catch (error) {
+      console.error("Error fetching customer by phone:", error.message);
+      throw new Error("Xảy ra lỗi khi tìm thông tin khách hàng"); // Preserve the original error message
+    }
+  }
+  
 module.exports = {
     payCartWeb,
     getCartById,
@@ -500,5 +516,6 @@ module.exports = {
     updateCustomerInfo,
     getInvoicesByAccountId,
     checkStockQuantityInCart,
+    getCustomerByPhone,
 }
 

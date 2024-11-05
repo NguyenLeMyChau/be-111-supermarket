@@ -1,4 +1,4 @@
-const { addProductToCart, getCartById, payCart, updateCart, removeProductCart, updateProductCart, updateCustomerInfo, getInvoicesByAccountId, checkStockQuantityInCart, getAllPromotionActive ,payCartWeb} = require("../services/customerService");
+const { addProductToCart, getCartById, payCart, updateCart, removeProductCart, updateProductCart, updateCustomerInfo, getInvoicesByAccountId, checkStockQuantityInCart, getAllPromotionActive ,payCartWeb, getCustomerByPhone} = require("../services/customerService");
 
 async function getCartByIdController(req, res) {
     try {
@@ -128,7 +128,38 @@ const checkStockQuantityInCartController = async (req, res) => {
     }
 }
 
-
+async function getCustomerByPhoneController(req, res) {
+    const { phone } = req.params;
+  
+    try {
+      // Call service to fetch customer by phone
+      const customer = await getCustomerByPhone(phone);
+  
+      // If customer is found, return it as the response
+      res.status(200).json({
+        success: true,
+        message: "Customer found",
+        data: customer,
+      });
+    } catch (error) {
+      // Check the specific error message to determine the response
+      if (error.message === "Phone number not registered.") {
+        res.status(404).json({
+          success: false,
+          message: "Phone number not registered",
+        });
+      } else {
+        // Handle other errors
+        console.error("Error fetching customer:", error);
+        res.status(500).json({
+          success: false,
+          message: error.message,
+          data: []
+        });
+      }
+    }
+  }
+  
 module.exports = {
     getCartByIdController,
     addProductToCartController,
@@ -140,4 +171,5 @@ module.exports = {
     getInvoicesByAccountIdController,
     checkStockQuantityInCartController,
     payCartWebController,
+    getCustomerByPhoneController
 };
