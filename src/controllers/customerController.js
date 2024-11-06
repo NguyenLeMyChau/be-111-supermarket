@@ -1,5 +1,5 @@
 
-const { getInvoiceById,addProductToCart, getCartById, payCart, updateCart, removeProductCart, updateProductCart, updateCustomerInfo, getInvoicesByAccountId, checkStockQuantityInCart, getAllPromotionActive ,payCartWeb, getCustomerByPhone} = require("../services/customerService");
+const { getInvoiceById,addProductToCart, getCartById, payCart, updateCart, removeProductCart, updateProductCart, updateCustomerInfo, getInvoicesByAccountId, checkStockQuantityInCart, getAllPromotionActive ,payCartWeb, getCustomerByPhone, getInvoiceLast} = require("../services/customerService");
 
 async function getCartByIdController(req, res) {
     try {
@@ -179,6 +179,18 @@ async function getCustomerByPhoneController(req, res) {
         res.status(500).json({ message: 'Server error', error });
     }
 };
+const getInvoiceLastController = async (req, res) => {
+    try {
+        const lastInvoice = await getInvoiceLast(); // Gọi service
+        if (lastInvoice) {
+            res.status(200).json(lastInvoice);
+        } else {
+            res.status(404).json({ message: "Không tìm thấy hóa đơn nào" });
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi khi lấy hóa đơn cuối cùng", error: error.message });
+    }
+};
 module.exports = {
     getCartByIdController,
     addProductToCartController,
@@ -191,5 +203,6 @@ module.exports = {
     checkStockQuantityInCartController,
     payCartWebController,
     getCustomerByPhoneController,
-    getInvoiceByCode
+    getInvoiceByCode,
+    getInvoiceLastController
 };
