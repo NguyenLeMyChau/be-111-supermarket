@@ -236,21 +236,26 @@ async function payCart(customerId, products,unit_id, paymentMethod, paymentInfo,
     }
 }
 
-async function payCartWeb(customerId, products, paymentMethod, paymentInfo, paymentAmount) {
-    console.log(customerId,paymentInfo, paymentAmount, paymentMethod);
+async function payCartWeb(employee,customerId, products, paymentMethod, paymentInfo, paymentAmount) {
+    console.log(employee);
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
         // Conditionally set customer_id only if customerId is not null
         const invoiceSaleHeaderData = {
+          
             paymentInfo: paymentInfo,
             paymentMethod: paymentMethod,
             paymentAmount: paymentAmount,
         };
         
+        if (employee) {
+           
+            invoiceSaleHeaderData.employee_id = employee._id;
+        }
         if (customerId) {
-            console.log(customerId)
+           
             invoiceSaleHeaderData.customer_id = customerId;
         }
 
@@ -313,13 +318,44 @@ async function payCartWeb(customerId, products, paymentMethod, paymentInfo, paym
         await session.commitTransaction();
         session.endSession();
 
-        return { success: true, message: 'Thanh toán thành công' };
+        return { success: true, message: 'Thanh toán thành công' ,data: invoiceSaleHeader};
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
         return { success: false, message: error.message };
     }
 }
+
+const getInvoiceById = async (invoiceCode) => {
+    try {
+        // Tìm hóa đơn theo mã hóa đơn
+        const invoice = await InvoiceSaleHeader.findOne({ invoiceCode })
+            .populate('customer_id')   // Hiển thị thêm thông tin khách hàng (chỉ lấy name và phone)
+            .populate('employee_id')         // Hiển thị tên nhân viên
+            .populate({
+                path: 'paymentInfo.address',        // Thông tin địa chỉ thanh toán
+                select: 'city district ward street'
+            });
+
+        if (!invoice) {
+            return { message: 'Invoice not found' };
+        }
+
+        // Tìm các chi tiết hóa đơn liên quan đến invoice
+        const invoiceDetails = await InvoiceSaleDetail.findOne({ invoiceSaleHeader_id: invoice._id })
+            .populate('products.product')         // Hiển thị tên sản phẩm
+            .populate('products.unit_id')         // Hiển thị tên đơn vị sản phẩm
+            .populate('products.promotion'); // Hiển thị mô tả khuyến mãi
+
+        return {
+            invoice,
+            invoiceDetails
+        };
+    } catch (error) {
+        console.error("Error fetching invoice:", error);
+        throw error;
+    }
+};
 
 
 const removeProductCart = async (accountId, productId) => {
@@ -518,5 +554,6 @@ module.exports = {
     getInvoicesByAccountId,
     checkStockQuantityInCart,
     getCustomerByPhone,
+    getInvoiceById
 }
 

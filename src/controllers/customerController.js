@@ -1,4 +1,5 @@
-const { addProductToCart, getCartById, payCart, updateCart, removeProductCart, updateProductCart, updateCustomerInfo, getInvoicesByAccountId, checkStockQuantityInCart, getAllPromotionActive ,payCartWeb, getCustomerByPhone} = require("../services/customerService");
+
+const { getInvoiceById,addProductToCart, getCartById, payCart, updateCart, removeProductCart, updateProductCart, updateCustomerInfo, getInvoicesByAccountId, checkStockQuantityInCart, getAllPromotionActive ,payCartWeb, getCustomerByPhone} = require("../services/customerService");
 
 async function getCartByIdController(req, res) {
     try {
@@ -44,12 +45,12 @@ async function payCartController(req, res) {
 }
 async function payCartWebController(req, res) {
     try {
-        const { customerId,
+        const {employee, customerId,
             products,
             paymentMethod,
             paymentInfo,
             paymentAmount } = req.body;
-        const cart = await payCartWeb(
+        const cart = await payCartWeb(employee,
             customerId,
             products,
             paymentMethod,
@@ -61,6 +62,7 @@ async function payCartWebController(req, res) {
         res.status(400).json({ message: error.message });
     }
 }
+
 async function updateCartController(req, res) {
     try {
         const { accountId, productList } = req.body;
@@ -159,7 +161,24 @@ async function getCustomerByPhoneController(req, res) {
       }
     }
   }
-  
+  const getInvoiceByCode = async (req, res) => {
+    const { invoiceCode } = req.params; // Lấy mã hóa đơn từ URL
+
+    try {
+        const invoiceData = await getInvoiceById(invoiceCode);
+
+        // Kiểm tra nếu không tìm thấy hóa đơn
+        if (!invoiceData.invoice) {
+            return res.status(404).json({ message: 'Không tìm thấy hóa đơn' });
+        }
+
+        // Trả về dữ liệu hóa đơn và chi tiết hóa đơn
+        res.status(200).json(invoiceData);
+    } catch (error) {
+        console.error("Error fetching invoice:", error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
 module.exports = {
     getCartByIdController,
     addProductToCartController,
@@ -171,5 +190,6 @@ module.exports = {
     getInvoicesByAccountIdController,
     checkStockQuantityInCartController,
     payCartWebController,
-    getCustomerByPhoneController
+    getCustomerByPhoneController,
+    getInvoiceByCode
 };

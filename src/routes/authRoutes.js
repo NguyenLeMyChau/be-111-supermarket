@@ -40,7 +40,8 @@ router.post('/get-product-by-barcode',productController.getProductsByBarcodeInUn
 
 router.post('/pay-cart-web', customerController.payCartWebController);
 
-router.get('/get-customer-by-phone/:phone', customerController.getCustomerByPhoneController);
+router.get('/getInvoices/:invoiceCode', customerController.getInvoiceByCode);
 
+router.get('/get-customer-by-phone/:phone', customerController.getCustomerByPhoneController);
 
 module.exports = router;

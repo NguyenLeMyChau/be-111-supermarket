@@ -11,8 +11,6 @@ const getAllInvoices = async () => {
 
     const invoices = await Promise.all(invoicesHeader.map(async (header) => {
         const customer = await Customer.findOne({ account_id: header.customer_id }).select('name');
-        console.log(header.customer_id)
-        console.log(customer)
         const detail = await InvoiceSaleDetail.findOne({ invoiceSaleHeader_id: header._id }).lean();
 
         // Duyệt qua products bên trong detail
