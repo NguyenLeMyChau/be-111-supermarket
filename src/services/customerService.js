@@ -357,6 +357,15 @@ const getInvoiceById = async (invoiceCode) => {
     }
 };
 
+const getInvoiceLast = async () => {
+    try {
+        const lastInvoice = await InvoiceSaleHeader.findOne().sort({ createdAt: -1 });
+        return lastInvoice;
+    } catch (error) {
+        console.error("Lỗi khi lấy hóa đơn cuối cùng:", error);
+        throw error;
+    }
+};
 
 const removeProductCart = async (accountId, productId) => {
     try {
@@ -554,6 +563,7 @@ module.exports = {
     getInvoicesByAccountId,
     checkStockQuantityInCart,
     getCustomerByPhone,
-    getInvoiceById
+    getInvoiceById,
+    getInvoiceLast
 }
 

@@ -42,6 +42,8 @@ router.post('/pay-cart-web', customerController.payCartWebController);
 
 router.get('/getInvoices/:invoiceCode', customerController.getInvoiceByCode);
 
+router.get('/lastInvoice', customerController.getInvoiceLastController);
+
 router.get('/get-customer-by-phone/:phone', customerController.getCustomerByPhoneController);
 
 module.exports = router;
