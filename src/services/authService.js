@@ -147,7 +147,8 @@ async function loginAccount({ phone, password }) {
                 phone: user.phone,
                 email: user.email,
                 gender: user.gender,
-                loyaltyPoints: user.loyaltyPoints
+                loyaltyPoints: user.loyaltyPoints,
+                employee_id:user.employee_id,
             },
         };
 
