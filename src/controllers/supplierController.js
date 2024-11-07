@@ -1,4 +1,4 @@
-const { getAllSupplier, addSupplier, updateSupplier } = require("../services/supplierService");
+const { getAllSupplier, addSupplier, updateSupplier, deleteSupplier } = require("../services/supplierService");
 
 
 async function getSuppliers(req, res) {
@@ -34,8 +34,20 @@ async function updateSupplierController(req, res) {
     }
 }
 
+const deleteSupplierController = async (req, res) => {
+    try {
+        const { supplierId } = req.params;
+        const result = await deleteSupplier(supplierId);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error(`Error deleting supplier: ${error.message}`);
+        res.status(400).json({ message: error.message });
+    }
+}
+
 module.exports = {
     getSuppliers,
     addSupplierController,
     updateSupplierController,
+    deleteSupplierController
 };

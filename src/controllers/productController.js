@@ -1,4 +1,4 @@
-const { getAllCategory, getAllProduct, getProductsBySupplierId, getProductsDetail, addCategory, updateCategory, addProductWithWarehouse, updateProduct, getAllProductsWithPriceAndPromotion, getAllProductsWithPriceAndPromotionNoCategory, getProductsByBarcodeInUnitConvert, getAllCategoryWithPrice } = require("../services/productService");
+const { getAllCategory, getAllProduct, getProductsBySupplierId, getProductsDetail, addCategory, updateCategory, addProductWithWarehouse, updateProduct, getAllProductsWithPriceAndPromotion, getAllProductsWithPriceAndPromotionNoCategory, getProductsByBarcodeInUnitConvert, getAllCategoryWithPrice, deleteCategory } = require("../services/productService");
 
 
 async function getCategories(req, res) {
@@ -7,6 +7,17 @@ async function getCategories(req, res) {
         res.status(200).json(categories);
     } catch (error) {
         console.error(`Error get categories: ${error.message}`);
+        res.status(400).json({ message: error.message });
+    }
+}
+
+const deleteCategoryController = async (req, res) => {
+    try {
+        const { categoryId } = req.params;
+        const category = await deleteCategory(categoryId);
+        res.status(200).json(category);
+    } catch (error) {
+        console.error(`Error delete category: ${error.message}`);
         res.status(400).json({ message: error.message });
     }
 }
@@ -109,8 +120,8 @@ async function getAllProductsWithPriceAndPromotionNoCategoryController(req, res)
 }
 async function getProductsByBarcodeInUnitConvertController(req, res) {
     try {
-        const {barcode} = req.body;
-       
+        const { barcode } = req.body;
+
         const products = await getProductsByBarcodeInUnitConvert(barcode);
         res.status(200).json(products);
     } catch (error) {
@@ -121,6 +132,7 @@ async function getProductsByBarcodeInUnitConvertController(req, res) {
 
 module.exports = {
     getCategories,
+    deleteCategoryController,
     addCategoryController,
     updateCategoryController,
     getProducts,

@@ -39,8 +39,28 @@ async function updateSupplier(supplierId, supplierData) {
 
 }
 
+const deleteSupplier = async (supplierId) => {
+    try {
+        if (!supplierId) {
+            throw new Error('supplierId is required');
+        }
+        const supplier = await Supplier.findOne({ _id: supplierId });
+        if (!supplier) {
+            throw new Error('Supplier not found');
+        }
+
+        // Delete the supplier
+        await Supplier.deleteOne({ _id: supplierId });
+        return { message: 'Supplier deleted successfully' };
+    }
+    catch (error) {
+        throw new Error('Error deleting supplier: ' + error.message);
+    }
+}
+
 module.exports = {
     getAllSupplier,
     addSupplier,
     updateSupplier,
+    deleteSupplier
 };

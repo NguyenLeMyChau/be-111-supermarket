@@ -37,6 +37,7 @@ const unitRoutes = require('./src/routes/unitRoutes');
 const uploadRoutes = require('./src/routes/uploadRoutes');
 const priceRoutes = require('./src/routes/priceRoutes');
 const invoiceRoutes = require('./src/routes/invoiceRoutes');
+const zalopay = require('./src/payment/zalopay/ZaloPay');
 
 // ROUTES Manager
 app.use('/api/auth', authRoutes);
@@ -48,6 +49,8 @@ app.use('/api/warehouse', authMiddleware(['manager']), warehouseRoutes);
 app.use('/api/unit', authMiddleware(['manager']), unitRoutes);
 app.use('/api/price', authMiddleware(['manager']), priceRoutes);
 app.use('/api/invoice', authMiddleware(['manager']), invoiceRoutes);
+
+app.use('/api/zalo-pay', zalopay);
 
 // ROUTES Customer
 app.use('/api/customer', authMiddleware(['customer']), customerRoutes);
