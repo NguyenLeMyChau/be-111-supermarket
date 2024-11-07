@@ -8,4 +8,6 @@ router.post('/add-supplier', supplierController.addSupplierController);
 
 router.put('/update-supplier/:supplierId', supplierController.updateSupplierController);
 
+router.delete('/delete-supplier/:supplierId', supplierController.deleteSupplierController);
+
 module.exports = router;

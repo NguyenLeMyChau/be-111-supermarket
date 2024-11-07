@@ -51,7 +51,7 @@ const deleteCategory = async (categoryId) => {
       throw new Error("Category not found");
     }
 
-    await Category.deleteOne({ _id: unitId });
+    await Category.deleteOne({ _id: categoryId });
     return { message: 'Category deleted successfully' };
   }
   catch (error) {
