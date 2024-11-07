@@ -11,4 +11,6 @@ router.post('/add-unit', unitController.addUnitController);
 
 router.put('/update-unit/:unitId', unitController.updateUnitController);
 
+router.delete('/delete-unit/:unitId', unitController.deleteUnitController);
+
 module.exports = router;

@@ -33,6 +33,25 @@ const addUnit = async (unit) => {
     }
 }
 
+const deleteUnit = async (unitId) => {
+    try {
+        if (!unitId) {
+            throw new Error('unitId is required');
+        }
+        const unit = await Unit.findOne({ _id: unitId });
+        if (!unit) {
+            throw new Error('Unit not found');
+        }
+
+        // Delete the unit
+        await Unit.deleteOne({ _id: unitId });
+        return { message: 'Unit deleted successfully' };
+    }
+    catch (error) {
+        throw new Error('Error deleting unit: ' + error.message);
+    }
+}
+
 const updateUnit = async (unitId, unitData) => {
     try {
         if (!unitId) {
@@ -59,5 +78,6 @@ module.exports = {
     getAllUnits,
     getUnitById,
     addUnit,
-    updateUnit
+    updateUnit,
+    deleteUnit
 };

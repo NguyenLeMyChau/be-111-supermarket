@@ -45,9 +45,21 @@ const updateUnitController = async (req, res) => {
     }
 }
 
+const deleteUnitController = async (req, res) => {
+    const { unitId } = req.params;
+    try {
+        await unitService.deleteUnit(unitId);
+        return res.status(204).end();
+    } catch (error) {
+        console.error('Failed to delete unit:', error);
+        return res.status(500).json({ message: 'Failed to delete unit', error: error.message });
+    }
+}
+
 module.exports = {
     getAllUnits,
     getUnitById,
     addUnitController,
-    updateUnitController
+    updateUnitController,
+    deleteUnitController
 };
