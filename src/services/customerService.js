@@ -328,24 +328,56 @@ async function payCartWeb(employee,customerId, products, paymentMethod, paymentI
 
 const getInvoiceById = async (invoiceCode) => {
     try {
-        // Tìm hóa đơn theo mã hóa đơn
+        // Find the invoice header by invoiceCode
         const invoice = await InvoiceSaleHeader.findOne({ invoiceCode })
-            .populate('customer_id')   // Hiển thị thêm thông tin khách hàng (chỉ lấy name và phone)
-            .populate('employee_id')         // Hiển thị tên nhân viên
             .populate({
-                path: 'paymentInfo.address',        // Thông tin địa chỉ thanh toán
-                select: 'city district ward street'
+                path: 'customer_id',
+                select: 'name phone' // Only retrieve customer name and phone
+            })
+            .populate({
+                path: 'employee_id',
+                select: 'name' // Only retrieve employee name
+            })
+            .populate({
+                path: 'paymentInfo.address',
+                select: 'city district ward street' // Address details
             });
 
         if (!invoice) {
             return { message: 'Invoice not found' };
         }
 
-        // Tìm các chi tiết hóa đơn liên quan đến invoice
+        // Fetch related invoice details, including nested promotion data
         const invoiceDetails = await InvoiceSaleDetail.findOne({ invoiceSaleHeader_id: invoice._id })
-            .populate('products.product')         // Hiển thị tên sản phẩm
-            .populate('products.unit_id')         // Hiển thị tên đơn vị sản phẩm
-            .populate('products.promotion'); // Hiển thị mô tả khuyến mãi
+            .populate({
+                path: 'products.product',
+                select: 'name' // Retrieve product name only
+            })
+            .populate({
+                path: 'products.unit_id',
+                select: 'unitName' // Retrieve unit name only
+            })
+            .populate({
+                path: 'products.promotion',
+                populate: [
+                    {
+                        path: 'product_id',
+                        select: 'name' // Get promotion's related product details
+                    },
+                    {
+                        path: 'product_donate',
+                        select: 'name' // Get details of the donated product in promotion
+                    },
+                    {
+                        path:'unit_id',
+                        select: 'description' // Get
+                    },
+                    {
+                        path:'unit_id_donate',
+                        select: 'description' // Get
+                    }
+                ]
+            });
 
         return {
             invoice,
@@ -353,9 +385,11 @@ const getInvoiceById = async (invoiceCode) => {
         };
     } catch (error) {
         console.error("Error fetching invoice:", error);
-        throw error;
+        throw new Error("Could not retrieve the invoice. Please try again.");
     }
 };
+
+
 
 const getInvoiceLast = async () => {
     try {
