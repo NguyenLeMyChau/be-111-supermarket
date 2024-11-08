@@ -26,7 +26,7 @@ const PromotionLineSchema = new Schema({
     enum: ['active', 'inactive','pauseactive'],
     default: 'inactive'
   },
-  // isActive: { type: Boolean, default: false },
+   isActive: { type: Boolean, default: true },
   type: {
     type: String,
     required: true,

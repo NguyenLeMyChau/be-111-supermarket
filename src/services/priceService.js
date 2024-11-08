@@ -5,7 +5,7 @@ const Unit = require("../models/Unit");
 
 async function getAllProductPriceHeader() {
   try {
-    const productPriceHeaders = await ProductPriceHeader.find();
+    const productPriceHeaders = await ProductPriceHeader.find({isActive:true});
     return productPriceHeaders;
   } catch (err) {
     throw new Error(`Error fetching product prices: ${err.message}`);
@@ -13,11 +13,11 @@ async function getAllProductPriceHeader() {
 }
 async function getAllProductPrices() {
   try {
-    const productPriceHeaders = await ProductPriceHeader.find();
+    const productPriceHeaders = await ProductPriceHeader.find({isActive:true});
     const productPricesWithDetails = await Promise.all(
       productPriceHeaders.map(async (header) => {
         const productPriceDetails = await ProductPriceDetail.find({
-          productPriceHeader_id: header._id,
+          productPriceHeader_id: header._id,isActive:true
         }).populate("unit_id");;
 
         const detailedProductPrices = await Promise.all(
@@ -73,6 +73,7 @@ const getpriceDetail = async (productPriceHeader_id) => {
     // Tìm kiếm các chi tiết giá sản phẩm theo `productPriceHeader_id`
     const productPriceDetails = await ProductPriceDetail.find({
       productPriceHeader_id: productPriceHeader_id,
+      isActive:true
     }).populate("unit_id");
 
     // Lấy chi tiết sản phẩm cùng với thông tin bổ sung từ `Product`
@@ -129,6 +130,7 @@ const copyProductPrice = async (productPriceData,id) => {
     // Step 2: Get all ProductPriceDetails for the active header
     const activePriceDetails = await ProductPriceDetail.find({
       productPriceHeader_id: activeHeader._id,
+      isActive:true
     });
     // Step 3: Create the new ProductPriceHeader  
     const newProductPrice = new ProductPriceHeader({
@@ -180,24 +182,16 @@ const addProductPrice = async (productPriceData) => {
 
 const updateProductPrice = async (priceId, updateData) => {
   const messages = []; // Mảng chứa các thông báo phản hồi
+  console.log(updateData)
+  const enddate = new Date(new Date(updateData.endDate)); // Chuyển updateData.endDate về đối tượng Date nếu cần
+  const startdate = new Date(new Date(updateData.startDate)); 
+  const startDate = new Date(updateData.startDate);
+  updateData.endDate = new Date(startDate.setHours(23, 59, 59, 999));
 
+  console.log(enddate)
   try {
-    const today = new Date();
-
-    // Kiểm tra nếu updateData.status là 'pauseactive' và endDate cần cập nhật
-    if (updateData.status === 'pauseactive' && updateData.endDate) {
-      const endDate = new Date(updateData.endDate);
-      const startDate = updateData.startDate ? new Date(updateData.startDate) : null;
-
-      // Nếu startDate không lớn hơn hôm nay, kiểm tra endDate
-      if (!startDate || startDate <= today) {
-        // Nếu endDate lớn hơn hôm nay, đặt endDate thành hôm nay
-        if (endDate > today) {
-          updateData.endDate = today;
-        }
-      }
-    }
-
+    const today = new Date(new Date().getTime() + 2 * 60 * 60 * 1000);
+    console.log(today)
     // Nếu status là 'active', kiểm tra item_code trùng lặp
     if (updateData.status === 'active') {
       // Lấy thông tin chương trình giá hiện tại để kiểm tra chi tiết
@@ -208,18 +202,15 @@ const updateProductPrice = async (priceId, updateData) => {
       }
 
       // Lấy các chi tiết sản phẩm từ ProductPriceDetail dựa trên ProductPriceHeader hiện tại
-      const existingDetails = await ProductPriceDetail.find({ productPriceHeader_id: priceId });
-      console.log(1)
-      console.log(existingDetails)
+      const existingDetails = await ProductPriceDetail.find({ productPriceHeader_id: priceId, isActive: true });
       const itemCodes = existingDetails.map(detail => detail.item_code);
-      console.log(2)
-      console.log(itemCodes)
-      // Kiểm tra trùng lặp trong các ProductPriceHeader khác đang active
+
+      // Kiểm tra trùng lặp trong các ProductPriceHeader khác đang active với điều kiện startDate và endDate
       const duplicateItem = await ProductPriceDetail.aggregate([
         {
           $match: {
-            productPriceHeader_id: { $ne: priceId },
-            item_code: { $in: itemCodes }
+            productPriceHeader_id: { $ne: priceId }, // Loại bỏ chính bản thân ProductPriceHeader
+            item_code: { $in: itemCodes } // Kiểm tra trùng item_code
           }
         },
         {
@@ -235,25 +226,44 @@ const updateProductPrice = async (priceId, updateData) => {
         },
         {
           $match: {
-            'header.status': 'active'
+            'header.status': 'active', // Chỉ tìm các ProductPriceHeader đang "active"
+            'header.isActive': true, // Chỉ tìm các ProductPriceHeader có isActive = true
+          }
+        },
+        {
+          $match: {
+            // Kiểm tra nếu startDate và endDate của header hiện tại không nằm trong khoảng startDate và endDate của các header khác có cùng item_code
+            $or: [
+              {
+                $and: [
+                  { 'header.startDate': { $gte: today } }, // startDate của header hiện tại phải sau endDate của các header khác
+                  { 'header.startDate': { $lte: enddate} }  // endDate của header hiện tại phải sau endDate của các header khác
+                ]
+              },
+              {
+                $and: [
+                  { 'header.endDate': { $lte: today } }, // startDate của header hiện tại phải trước startDate của các header khác
+                  { 'header.endDate': { $gte:  startdate} }  // endDate của header hiện tại phải trước startDate của các header khác
+                ]
+              }
+            ]
           }
         },
         {
           $limit: 1 // Giới hạn chỉ lấy 1 kết quả
         }
       ]);
-      console.log(332)
-      console.log(duplicateItem)
+      
       if (duplicateItem.length > 0) {
         // Lấy danh sách tất cả giá sản phẩm sau khi cập nhật thành công
-    const allProductPrices = await getAllProductPrices();
+        const allProductPrices = await getAllProductPrices();
 
-    // Thêm thông báo cập nhật thành công
-      
+        // Thêm thông báo trùng lặp vào messages
+        console.log(updateData)
+        console.log(duplicateItem[0].header)
         messages.push(`Đã có sản phẩm trùng lặp với bảng giá khác đang hoạt động (ID: ${duplicateItem[0].header.description})`);
-        return { updatedPrice: null,allProductPrices, messages };
+        return { updatedPrice: null, allProductPrices, messages };
       }
-      
     }
 
     // Tiến hành cập nhật giá sản phẩm
@@ -274,6 +284,7 @@ const updateProductPrice = async (priceId, updateData) => {
   } catch (error) {
     // Thêm thông báo lỗi vào mảng messages
     messages.push('Lỗi cập nhật sản phẩm');
+    console.log(error)
     // Trả về null và messages nếu có lỗi
     return { updatedPrice: null, allProductPrices: null, messages };
   }
@@ -297,12 +308,13 @@ const addProductPriceDetail = async (priceDetailData) => {
     const existingPriceDetail = await ProductPriceDetail.findOne({
       productPriceHeader_id,
       item_code,
-      unit_id
+      unit_id,
     });
 
     if (existingPriceDetail) {
       // Nếu sản phẩm đã tồn tại, cập nhật giá thay vì thêm mới
       existingPriceDetail.price = price;
+      existingPriceDetail.isActive = true;
       await existingPriceDetail.save();
       // const allProductPriceDetail = await getpriceDetail(productPriceHeader_id);
       const allProductPriceDetail = await getAllProductPrices();
@@ -355,7 +367,7 @@ async function getProductsWithoutPriceAndActivePromotion(productPriceHeader_id) 
   try {
     
     // Bước 1: Tìm các `item_code` và `unit_id` có liên kết với `productPriceHeader_id` trong `productPrice_detail`
-    const productsWithPrice = await ProductPriceDetail.find({ productPriceHeader_id })
+    const productsWithPrice = await ProductPriceDetail.find({ productPriceHeader_id ,isActive:true})
       .select('item_code unit_id'); // Chọn `item_code` và `unit_id`
     
     // Lấy danh sách `item_code` và `unit_id` có trong `productPrice_detail`
@@ -377,37 +389,58 @@ async function getProductsWithoutPriceAndActivePromotion(productPriceHeader_id) 
 
 const deleteProductPriceHeader = async (headerId) => {
   try {
-    // Xóa tất cả các ProductPriceDetail liên kết với ProductPriceHeader này
-    await ProductPriceDetail.deleteMany({ productPriceHeader_id: headerId });
+    // Find the ProductPriceHeader by id
+    const header = await ProductPriceHeader.findById(headerId);
 
-    // Xóa ProductPriceHeader
-    const deletedHeader = await ProductPriceHeader.findByIdAndDelete(headerId);
-
-    if (!deletedHeader) {
-      return { success: false, message: 'Không tìm thấy chương trình giá',allProductPrices:null };
+    if (!header) {
+      return { success: false, message: 'Không tìm thấy chương trình giá', allProductPrices: await getAllProductPrices() };
     }
+
+    // Update the isActive field of the ProductPriceHeader to false
+    header.isActive = false;
+    await header.save(); // Save the updated ProductPriceHeader
+
+    // Update the isActive field of the associated ProductPriceDetail documents
+    await ProductPriceDetail.updateMany(
+      { productPriceHeader_id: headerId },
+      { $set: { isActive: false } } // Set isActive to false for all related details
+    );
+
+    // Fetch the updated list of product prices
     const allProductPrices = await getAllProductPrices();
-    
-    return { success: true, message: 'Xóa thành công',allProductPrices };
+
+    return { success: true, message: 'Xóa thành công', allProductPrices };
   } catch (error) {
-    return { success: false, message: 'Xóa thất bại',allProductPrices:null };
+    console.error(error);
+    return { success: false, message: 'Cập nhật thất bại', allProductPrices: await getAllProductPrices() };
   }
 };
+
 
 const deleteProductPriceDetail = async (detailId) => {
   try {
-    const deletedDetail = await ProductPriceDetail.findByIdAndDelete(detailId);
+    // Find the ProductPriceDetail by id
+    const detail = await ProductPriceDetail.findById(detailId);
 
-    if (!deletedDetail) {
-      return { success: false, message: 'Không tìm thấy giá cần xóa',allProductPrices:null };
+    // If the detail does not exist, return a message
+    if (!detail) {
+      return { success: false, message: 'Không tìm thấy giá cần xóa', allProductPrices: await getAllProductPrices() };
     }
+
+    // Update the isStatus field to false instead of deleting the document
+    detail.isActive = false;
+    await detail.save();  // Save the updated document
+
+    // Fetch the updated list of product prices
     const allProductPrices = await getAllProductPrices();
 
-    return { success: true, message: 'Xóa thành công',allProductPrices };
+    return { success: true, message: 'Xóa thành công', allProductPrices };
   } catch (error) {
-    return { success: false, message: 'Xóa thất bại',allProductPrices:null };
+    console.error(error);
+    return { success: false, message: 'Xóa thất bại', allProductPrices: await getAllProductPrices() };
   }
 };
+
 
 module.exports = {
   getAllProductPrices,

@@ -24,13 +24,13 @@ async function getActivePromotionLinesForToday() {
   
 async function getAllPromotion() {
     try {
-        const promotionHeaders = await PromotionHeader.find();
+        const promotionHeaders = await PromotionHeader.find({isActive: true});
 
         const promotions = await Promise.all(promotionHeaders.map(async (promotionHeader) => {
-            const promotionLines = await PromotionLine.find({ promotionHeader_id: promotionHeader._id });
+            const promotionLines = await PromotionLine.find({ promotionHeader_id: promotionHeader._id ,isActive: true});
 
             const promotionDetails = await Promise.all(promotionLines.map(async (promotionLine) => {
-                const details = await PromotionDetail.find({ promotionLine_id: promotionLine._id }).populate('unit_id')
+                const details = await PromotionDetail.find({ promotionLine_id: promotionLine._id,isActive: true }).populate('unit_id')
                 .populate('unit_id_donate');
                 const detailedPromotions = await Promise.all(details.map(async (detail) => {
                     const product = await Product.findById(detail.product_id).populate('unit_id');
@@ -288,107 +288,144 @@ const getPromotionByProductId = async (productId, unit_id) => {
 }; 
 async function getAllPromotionActive() {
     try {
-      const currentDate = new Date();
-  
-      // Find promotion details with active promotionLine and promotionHeader, within valid dates
-      const promotions = await PromotionDetail.find()
-        .populate({
-          path: 'promotionLine_id',
-          match: {
-            status: 'active',
-            startDate: { $lte: currentDate }, // promotionLine start date should be on or before current date
-            endDate: { $gte: currentDate } // promotionLine end date should be on or after current date
-          },
-          select: 'description startDate endDate isActive type',
-          populate: {
-            path: 'promotionHeader_id',
-            match: {
-              isActive: true,
-              startDate: { $lte: currentDate }, // promotionHeader start date should be on or before current date
-              endDate: { $gte: currentDate } // promotionHeader end date should be on or after current date
-            },
-            select: 'description startDate endDate isActive'
-          }
-        })
-        .exec();
-  
-      // Filter promotions where both promotionLine and promotionHeader are non-null (ensuring they meet the active and date criteria)
-      const validPromotions = promotions.filter(promotion =>
-        promotion.promotionLine_id && promotion.promotionLine_id.promotionHeader_id
-      );
-  
-      return validPromotions;
+        const currentDate = new Date();
+
+        // Find promotion details with active promotionLine, promotionHeader, and promotionDetail
+        const promotions = await PromotionDetail.find({ isActive: true })  // Filter PromotionDetail by isActive
+            .populate({
+                path: 'promotionLine_id',
+                match: {
+                    isActive: true, // Ensure promotionLine is active
+                    status: 'active', // Ensure promotionLine status is active
+                    startDate: { $lte: currentDate }, // promotionLine start date should be on or before current date
+                    endDate: { $gte: currentDate } // promotionLine end date should be on or after current date
+                },
+                select: 'description startDate endDate isActive type',
+                populate: {
+                    path: 'promotionHeader_id',
+                    match: {
+                        isActive: true, // Ensure promotionHeader is active
+                        startDate: { $lte: currentDate }, // promotionHeader start date should be on or before current date
+                        endDate: { $gte: currentDate } // promotionHeader end date should be on or after current date
+                    },
+                    select: 'description startDate endDate isActive'
+                }
+            })
+            .exec();
+
+        // Filter promotions where all related documents are valid and active
+        const validPromotions = promotions.filter(promotion =>
+            promotion.promotionLine_id && 
+            promotion.promotionLine_id.promotionHeader_id &&
+            promotion.isActive // Ensure the promotion detail is active
+        );
+
+        return validPromotions;
     } catch (error) {
-      console.error('Error retrieving active promotions:', error);
-      throw error;
+        console.error('Error retrieving active promotions:', error);
+        throw error;
     }
-  };
+}
+
+
   
-    const deletePromotionHeader = async (promotionHeaderId) => {
-        const messages = [];
-        try {
-            // Step 1: Find all PromotionLine documents associated with the PromotionHeader
-            const promotionLines = await PromotionLine.find({ promotionHeader_id: promotionHeaderId });
-    
-            // Step 2: Get the IDs of all associated PromotionLine documents
-            const promotionLineIds = promotionLines.map(line => line._id);
-    
-            // Step 3: Delete all PromotionDetail documents that reference any of these PromotionLine IDs
-            await PromotionDetail.deleteMany({ promotionLine_id: { $in: promotionLineIds } });
-    
-            // Step 4: Delete all PromotionLine documents associated with the PromotionHeader
-            await PromotionLine.deleteMany({ promotionHeader_id: promotionHeaderId });
-    
-            // Step 5: Delete the PromotionHeader itself
-            const result = await PromotionHeader.findByIdAndDelete(promotionHeaderId);
-            if (!result) {
-                messages.push('Không tìm thấy chương trình khuyến mãi') 
-            }else{
-               
-                messages.push('Xóa chương trình khuyến mãi thành công')
-              
-            }
-            const allPromotion = await getAllPromotion();
-            return { message:messages,data: allPromotion};
-        } catch (error) {
-            const allPromotion = await getAllPromotion();
-            messages.push('Lỗi xóa chương trình khuyến mãi') 
-            return { message:messages, data: allPromotion};
+  const deletePromotionHeader = async (promotionHeaderId) => {
+    const messages = [];
+    try {
+        // Step 1: Find all PromotionLine documents associated with the PromotionHeader
+        const promotionLines = await PromotionLine.find({ promotionHeader_id: promotionHeaderId });
+
+        // Step 2: Get the IDs of all associated PromotionLine documents
+        const promotionLineIds = promotionLines.map(line => line._id);
+
+        // Step 3: Update all PromotionDetail documents that reference any of these PromotionLine IDs
+        const detailsUpdated = await PromotionDetail.updateMany(
+            { promotionLine_id: { $in: promotionLineIds } },
+            { $set: { isActive: false } } // Set isActive to false
+        );
+
+        // Step 4: Update all PromotionLine documents associated with the PromotionHeader
+        const linesUpdated = await PromotionLine.updateMany(
+            { promotionHeader_id: promotionHeaderId },
+            { $set: { status: 'inactive' ,isActive: false} } // Set status to 'inactive'
+        );
+
+        // Step 5: Update the PromotionHeader itself
+        const result = await PromotionHeader.findByIdAndUpdate(
+            promotionHeaderId,
+            { $set: { isActive: false } }, // Set isActive to false
+            { new: true }
+        );
+
+        if (!result) {
+            messages.push('Không tìm thấy chương trình khuyến mãi');
+        } else {
+            messages.push('Đã cập nhật chương trình khuyến mãi thành công');
         }
-    };
+
+        // Optionally: Retrieve the updated promotion list
+        const allPromotion = await getAllPromotion();
+        return {
+            message: messages,
+            data: allPromotion,
+        };
+    } catch (error) {
+        const allPromotion = await getAllPromotion();
+        messages.push('Lỗi khi cập nhật chương trình khuyến mãi: ' + error.message);
+        return {
+            message: messages,
+            data: allPromotion,
+        };
+    }
+};
+
     const deletePromotionLine = async (promotionLineId) => {
         const messages = [];
         try {
-           
-            const detailsDeleted = await PromotionDetail.deleteMany({ promotionLine_id: promotionLineId });
+            // Step 1: Update all PromotionDetail documents related to the PromotionLine
+            const detailsUpdated = await PromotionDetail.updateMany(
+                { promotionLine_id: promotionLineId },
+                { $set: { isActive: false } }
+            );
     
-            // Bước 2: Xóa PromotionLine
-            const result = await PromotionLine.findByIdAndDelete(promotionLineId);
+            // Step 2: Update the PromotionLine instead of deleting it
+            const result = await PromotionLine.findByIdAndUpdate(
+                promotionLineId,
+                { $set: { isActive: false, status: 'inactive' } },
+                { new: true } // Return the updated document
+            );
+    
             if (!result) {
                 messages.push('Không tìm thấy dòng khuyến mãi');
             } else {
-                messages.push('Đã xóa dòng khuyến mãi thành công');
+                messages.push('Đã cập nhật dòng khuyến mãi thành công');
             }
     
-            // Tùy chọn: Bạn có thể lấy danh sách các dòng khuyến mãi hiện tại
+            // Optionally: Retrieve the updated promotion list
             const allPromotion = await getAllPromotion();
             return {
-                message:messages,
+                message: messages,
                 data: allPromotion,
             };
         } catch (error) {
-            messages.push('Lỗi khi xóa dòng khuyến mãi và chi tiết: ');
+            messages.push('Lỗi khi cập nhật dòng khuyến mãi và chi tiết: ' + error.message);
             return {
-                message:messages,
-                data:  await getAllPromotion() 
+                message: messages,
+                data: await getAllPromotion(),
             };
         }
     };
+    
     
     const deletePromotionDetail = async (id) => {
         const messages = [];
         try {
-            const result = await PromotionDetail.findByIdAndDelete(id);
+            const result = await PromotionDetail.findByIdAndUpdate(
+                id,
+                { $set: { isActive: false } },  // Update isActive to false
+                { new: true }  // This will return the updated document
+            );
+            
             if (!result) {
                 messages.push('Không tìm thấy chi tiết khuyến mãi');
             } else {
@@ -397,17 +434,18 @@ async function getAllPromotionActive() {
     
             const allPromotion = await getAllPromotion();
             return {
-                message:messages,
+                message: messages,
                 data: allPromotion,
             };
         } catch (error) {
             messages.push('Lỗi khi xóa chi tiết khuyến mãi: ' + error.message);
             return {
-                message:messages,
-                data:  await getAllPromotion() 
+                message: messages,
+                data: await getAllPromotion(),
             };
         }
     };
+    
     
     
 module.exports = {

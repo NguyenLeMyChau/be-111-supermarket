@@ -7,6 +7,7 @@ const productPriceDetailSchema = new mongoose.Schema({
     ref: 'productPrice_header',
     required: true
   },
+  isActive: { type: Boolean, default: true },
   item_code: { type: String, required: true },
   unit_id: { type: mongoose.Schema.Types.ObjectId, ref: 'unit' },
   price: {

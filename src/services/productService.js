@@ -366,22 +366,36 @@ const updateProduct = async (productId, productData) => {
 async function getAllProductsWithPriceAndPromotion() {
   try {
     // Lọc ProductPriceDetail chỉ lấy những bản ghi có ProductPriceHeader đang hoạt động
-    const productPrices = await ProductPriceDetail.find({
-      productPriceHeader_id: { $ne: null }, // Bỏ qua các bản ghi không có liên kết ProductPriceHeader
-    }).populate({
-      path: "productPriceHeader_id",
-      match: { status: "active" }, // Chỉ lấy ProductPriceHeader có status là 'active'
-    }).populate({
-      path: 'unit_id'
-    });;
+    const currentDate = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
 
-    // Lọc ra các bản ghi hợp lệ (loại bỏ những bản ghi có productPriceHeader_id là null)
+    const productPrices = await ProductPriceDetail.find({
+      isActive: true,
+      productPriceHeader_id: { $ne: null }, // Exclude records that do not have a ProductPriceHeader_id
+    })
+      .populate({
+        path: 'productPriceHeader_id',
+        match: {
+          status: 'active',          // Only get ProductPriceHeader with status 'active'
+          isActive: true,            // Only get ProductPriceHeader with isActive = true
+          startDate: { $lte: currentDate }, // Only get headers where startDate is less than or equal to the current date
+          endDate: { $gte: currentDate },   // Only get headers where endDate is greater than or equal to the current date
+        },
+        select: 'description startDate endDate isActive status', // Select only relevant fields
+      })
+      .populate({
+        path: 'unit_id', // Populate unit_id for each ProductPriceDetail
+      });
+    
+    // Filter out any ProductPriceDetail without a valid productPriceHeader_id
     const filteredProductPrices = productPrices.filter(
       (priceDetail) => priceDetail.productPriceHeader_id !== null
     );
-
+    
+    console.log(currentDate)
+    console.log(filteredProductPrices)
+    
     // Lấy tất cả PromotionHeader đang hoạt động
-    const activePromotionHeaders = await PromotionHeader.find();
+    const activePromotionHeaders = await PromotionHeader.find({isActive: true});
     const today = new Date();
     // Lấy tất cả PromotionLine có liên kết với PromotionHeader đang hoạt động
     const activePromotionLines = await PromotionLine.find({
@@ -389,6 +403,7 @@ async function getAllProductsWithPriceAndPromotion() {
         $in: activePromotionHeaders.map((header) => header._id),
       },
       status: 'active',
+      isActive:true,
       startDate: { $lte: today },
       endDate: { $gte: today },
     });
@@ -415,10 +430,13 @@ async function getAllProductsWithPriceAndPromotion() {
       if (product) {
         // Tìm các khuyến mãi áp dụng cho sản phẩm hiện tại
         for (const promoHeader of activePromotionHeaders) {
-          const promoLines = activePromotionLines.filter(line => line.promotionHeader_id.equals(promoHeader._id));
+          const promoLines = activePromotionLines.filter(line => 
+            line.promotionHeader_id.equals(promoHeader._id) && line.isActive === true
+          );
+          
 
           for (const promoLine of promoLines) {
-            const promoDetails = activePromotionDetails.filter(detail => detail.promotionLine_id.equals(promoLine._id));
+            const promoDetails = activePromotionDetails.filter(detail => detail.promotionLine_id.equals(promoLine._id)  && detail.isActive === true);
 
             for (const promoDetail of promoDetails) {
               if ((promoDetail.product_id && promoDetail.product_id.equals(product._id)) && (promoDetail.unit_id && promoDetail.unit_id.equals(priceDetail.unit_id._id)) || (promoDetail.product_donate && promoDetail.product_donate.equals(product._id)) && (promoDetail.unit_id_donate && promoDetail.unit_id_donate.equals(priceDetail.unit_id._id))) {
@@ -495,38 +513,50 @@ async function getAllProductsWithPriceAndPromotion() {
 
 async function getAllProductsWithPriceAndPromotionNoCategory() {
   try {
-    // Filter ProductPriceDetail to get only records with active ProductPriceHeader
+    
+    const currentDate = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
+
     const productPrices = await ProductPriceDetail.find({
-      productPriceHeader_id: { $ne: null }, // Exclude records without a linked ProductPriceHeader
+      isActive: true,
+      productPriceHeader_id: { $ne: null }, // Exclude records that do not have a ProductPriceHeader_id
     })
       .populate({
-        path: "productPriceHeader_id",
-        match: { status: "active" }, // Only include active ProductPriceHeader
+        path: 'productPriceHeader_id',
+        match: {
+          status: 'active',          // Only get ProductPriceHeader with status 'active'
+          isActive: true,            // Only get ProductPriceHeader with isActive = true
+          startDate: { $lte: currentDate }, // Only get headers where startDate is less than or equal to the current date
+          endDate: { $gte: currentDate },   // Only get headers where endDate is greater than or equal to the current date
+        },
+        select: 'description startDate endDate isActive status', // Select only relevant fields
       })
       .populate({
-        path: 'unit_id'
+        path: 'unit_id', // Populate unit_id for each ProductPriceDetail
       });
-
-    // Filter out invalid records (remove those with a null productPriceHeader_id)
+    
+    // Filter out any ProductPriceDetail without a valid productPriceHeader_id
     const filteredProductPrices = productPrices.filter(
       (priceDetail) => priceDetail.productPriceHeader_id !== null
     );
-
+    
+    
     // Get all active PromotionHeader
-    const activePromotionHeaders = await PromotionHeader.find();
+    const activePromotionHeaders = await PromotionHeader.find({isActive: true});
     const today = new Date();
     // Get all active PromotionLine linked to active PromotionHeader
     const activePromotionLines = await PromotionLine.find({
       promotionHeader_id: {
         $in: activePromotionHeaders.map((header) => header._id),
       },
+      isActive: true,
       status: 'active',
       startDate: { $lte: today },
       endDate: { $gte: today },
     });
 
     // Get all active PromotionDetail based on promotionLine_id
-    const activePromotionDetails = await PromotionDetail.find({
+    const activePromotionDetails = await PromotionDetail.find({ 
+      isActive: true,
       promotionLine_id: { $in: activePromotionLines.map((line) => line._id) },
     }).populate("product_id product_donate unit_id unit_id_donate");
 
@@ -616,39 +646,51 @@ async function getProductsByBarcodeInUnitConvert(barcode) {
 
     // Tìm giá sản phẩm dựa trên item_code hoặc một trường phù hợp khác
     const productPriceDetails = await ProductPriceDetail.find({
-      item_code: product.item_code // hoặc có thể dùng trường khác để tìm
-    }).populate('unit_id'); // populate để lấy tên đơn vị, nếu cần
-    console.log(productPriceDetails)
-    if (productPriceDetails.length > 0) {
-      const priceMap = {};
-      productPriceDetails.forEach(detail => {
-        priceMap[detail.unit_id._id.toString()] = detail.price; // Sử dụng ID của đơn vị làm khóa
+      isActive: true,
+      item_code: product.item_code, // Hoặc có thể dùng trường khác để tìm
+    })
+      .populate({
+        path: 'unit_id',
+      })
+      .populate({
+        path: 'productPriceHeader_id', // assuming the reference to productPriceHeader is 'productPriceHeader_id'
+        match: { status: 'active' , isActive:true }, // filter productPriceHeader by status 'active'
+      });
 
+    // Lọc ra các ProductPriceDetail có productPriceHeader_id là active
+    const activeProductPriceDetails = productPriceDetails.filter(detail => detail.productPriceHeader_id !== null);
+
+    console.log(activeProductPriceDetails);
+
+    if (activeProductPriceDetails.length > 0) {
+      const priceMap = {};
+      activeProductPriceDetails.forEach(detail => {
+        priceMap[detail.unit_id._id.toString()] = detail.price; // Sử dụng ID của đơn vị làm khóa
       });
 
       return {
-
         _id: product._id,
         name: product.name,
         barcode: product.unit_convert.find((unit) => unit.barcode === barcode).barcode,
         unit_id: product.unit_convert.find((unit) => unit.barcode === barcode).unit,
         img: product.img,
-
         unit_converts: product.unit_convert.map(unit => ({
           unit: unit.unit,
           quantity: unit.quantity,
           barcode: unit.barcode,
           img: unit.img,
           checkBaseUnit: unit.checkBaseUnit,
-          price: priceMap[unit.unit._id.toString()] || null // Lấy giá từ priceMap, nếu không có thì trả về null
+          price: priceMap[unit.unit._id.toString()] || null, // Lấy giá từ priceMap, nếu không có thì trả về null
         })),
-
       };
+    } else {
+      return { message: 'Không tìm thấy giá sản phẩm cho sản phẩm này.' };
     }
   } catch (err) {
     throw new Error(`Không tìm thấy sản phẩm: ${err.message}`);
   }
 }
+
 
 module.exports = {
   getAllCategory,

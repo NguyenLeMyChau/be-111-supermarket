@@ -34,7 +34,7 @@ const PromotionDetailSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'product', // Sản phẩm tặng kèm
   },
-
+  isActive: { type: Boolean, default: true },
   amount_sales: {
     type: Number,
   },

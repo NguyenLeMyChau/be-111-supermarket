@@ -28,6 +28,7 @@ const productPriceHeaderSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
+  isActive: { type: Boolean, default: true },
   status: {
     type: String,
     enum: ['active', 'inactive','pauseactive'],

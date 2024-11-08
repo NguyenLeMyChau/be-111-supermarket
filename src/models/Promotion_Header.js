@@ -21,6 +21,7 @@ const PromotionHeaderSchema = new Schema({
     type: String,
     unique: true, // Đảm bảo mỗi ID là duy nhất
   },
+  isActive: { type: Boolean, default: true },
 }, {
   timestamps: true, // Tự động thêm createdAt và updatedAt
 });
