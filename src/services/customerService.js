@@ -29,7 +29,6 @@ async function getCartById(accountId) {
         // Lấy thông tin sản phẩm từ product_id
         const productsWithDetails = await Promise.all(products.map(async (product) => {
             const image = product.product_id.unit_convert.find((unit) => unit.unit.equals(product.unit_id._id));
-            console.log(product)
             return {
                 product_id: product.product_id,
                 name: product.product_id.name || null, // lấy tên sản phẩm
@@ -51,10 +50,10 @@ async function getCartById(accountId) {
 
 async function addProductToCart(accountId, productId, unitId, quantity, total) {
     try {
-        console.log(accountId, productId, unitId, quantity, total)
+       
         // Tìm giỏ hàng của người dùng
         let product = await Product.findById(productId)
-        console.log(product)
+        
         let cart = await Cart.findOne({ account_id: accountId });
         let priceInfo = await ProductPriceDetail.findOne({
             item_code: product.item_code,
@@ -64,7 +63,7 @@ async function addProductToCart(accountId, productId, unitId, quantity, total) {
                 path: "productPriceHeader_id",
                 match: { status: "active" }, // Only include active ProductPriceHeader
             });
-        console.log(priceInfo)
+       
         // Nếu giỏ hàng chưa tồn tại, tạo giỏ hàng mới
         if (!cart) {
             cart = new Cart({ account_id: accountId, products: [] });
@@ -97,22 +96,29 @@ async function updateCart(accountId, productList) {
         // Tìm giỏ hàng của người dùng
         let cart = await Cart.findOne({ account_id: accountId });
 
-        // Duyệt qua danh sách sản phẩm và cập nhật giá
-        for (let product of productList) {
-            // Tìm giá theo product._id từ ProductPriceDetail
-            let priceInfo = await ProductPriceDetail.findOne({ product_id: product.product_id }).populate({
-                path: "productPriceHeader_id",
-                match: { status: "active" }, // Only include active ProductPriceHeader
-            });
-            if (priceInfo) {
-                // Gán lại giá cho sản phẩm
-                product.price = priceInfo._id;
-            }
+        // Nếu giỏ hàng không tồn tại, tạo giỏ hàng mới
+        if (!cart) {
+            cart = new Cart({ account_id: accountId, products: [] });
         }
-        // Cập nhật giỏ hàng
-        cart.products = productList;
 
-        // Lưu giỏ hàng
+        console.log('222',productList);
+        console.log(cart);
+        // Duyệt qua danh sách sản phẩm từ đầu vào
+        productList.forEach((product) => {
+            // Tìm sản phẩm trong giỏ hàng hiện tại
+            const existingProduct = cart.products.find(
+                (item) => item.product_id.toString() === product.product_id._id.toString() &&
+                          item.unit_id.toString() === product.unit._id.toString()
+            );
+
+            if (existingProduct) {
+                console.log('111',existingProduct)
+                existingProduct.quantity = product.quantity;
+                existingProduct.total = product.total;
+            }
+        });
+
+        // Lưu giỏ hàng sau khi cập nhật
         await cart.save();
 
         return cart;
@@ -121,6 +127,7 @@ async function updateCart(accountId, productList) {
         throw new Error(`Error updating cart: ${err.message}`);
     }
 }
+
 
 async function removeAllProductInCart(accountId) {
     try {
@@ -139,7 +146,7 @@ async function removeAllProductInCart(accountId) {
     }
 }
 
-async function payCart(customerId, products,unit_id, paymentMethod, paymentInfo, paymentAmount) {
+async function payCart(customerId, products, paymentMethod, paymentInfo, paymentAmount) {
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -167,13 +174,14 @@ async function payCart(customerId, products,unit_id, paymentMethod, paymentInfo,
 
         for (const product of products) {
             // Lấy thông tin khuyến mãi cho từng sản phẩm
-            const promotions = await promotionService.getPromotionByProductId(product.product_id,unit_id); // Thay đổi để lấy theo ID sản phẩm
-
+            const promotions = await promotionService.getPromotionByProductId(product.product_id._id,product.unit._id); // Thay đổi để lấy theo ID sản phẩm
+console.log('promotionss',promotions)
             const invoiceSaleDetail = {
-                product: product.product_id, // ID sản phẩm
-                quantity: product.quantity, // Số lượng
-                price: product.price, // ID giá sản phẩm
-                promotion: promotions.length > 0 ? promotions[0]._id : null // ID khuyến mãi nếu có
+                    product: product.product_id._id, // ID sản phẩm
+                    quantity: product.quantity, // Số lượng
+                    unit_id:product.unit._id,
+                    price: product.price.price, // Giá sản phẩm
+                    promotion:promotions.length > 0 ? promotions[0]._id : null,
             };
 
             invoiceSaleDetails.push(invoiceSaleDetail);
@@ -202,12 +210,15 @@ async function payCart(customerId, products,unit_id, paymentMethod, paymentInfo,
 
         for (const product of products) {
             const pro = await Product.findById(product.product_id).session(session);
-            const unit = await Unit.findById(pro.unit_id).session(session);
-            console.log(pro, unit) // Sử dụng session cho findById
+            const unit = await Unit.findById(product.unit._id).session(session);
+          
             const conversionFactor = unit.quantity || 1;
 
             // Tìm warehouse bằng item_code, có session
-            const warehouse = await Warehouse.findOne({ item_code: pro.item_code }).session(session);
+            const warehouse = await Warehouse.findOne({
+                item_code: pro.item_code,
+                unit_id: unit._id
+            }).session(session);
 
             // Tính số lượng cần cập nhật (quantity * conversionFactor)
             const quantityToAdd = product.quantity * conversionFactor;
@@ -237,7 +248,7 @@ async function payCart(customerId, products,unit_id, paymentMethod, paymentInfo,
 }
 
 async function payCartWeb(employee,customerId, products, paymentMethod, paymentInfo, paymentAmount) {
-    console.log(employee);
+ 
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -278,6 +289,7 @@ async function payCartWeb(employee,customerId, products, paymentMethod, paymentI
                 // Push the detail into the invoice sale details array
                 invoiceSaleDetails.push(invoiceSaleDetail);
         }
+
         const newInvoiceSaleDetail = new InvoiceSaleDetail({
             invoiceSaleHeader_id: invoiceSaleHeader._id,
             products: invoiceSaleDetails,
@@ -298,7 +310,7 @@ async function payCartWeb(employee,customerId, products, paymentMethod, paymentI
         for (const product of products) {
             const pro = await Product.findById(product._id).session(session);
             const unit = await Unit.findById(product.unit._id).session(session);
-            console.log('222',pro, unit);
+          
             const conversionFactor = unit.quantity || 1;
             const warehouse = await Warehouse.findOne({
                 item_code: pro.item_code,
@@ -401,23 +413,43 @@ const getInvoiceLast = async () => {
     }
 };
 
-const removeProductCart = async (accountId, productId) => {
+const removeProductCart = async (accountId, productId, unitId) => {
     try {
         // Tìm giỏ hàng của người dùng
         let cart = await Cart.findOne({ account_id: accountId });
 
-        // Xóa sản phẩm trong giỏ hàng
-        cart.products = cart.products.filter(p => p.product_id.toString() !== productId);
+        if (!cart) {
+            return { success: false, message: 'Cart not found' };
+        }
 
-        // Lưu lại giỏ hàng đã được cập nhật
+        // Tìm sản phẩm trong giỏ hàng khớp với product_id và unit_id
+        const pro = cart.products.find(p => p.product_id.toString() === productId.toString() && p.unit_id.toString() === unitId.toString());
+        console.log('Found product:', pro);
+
+        if (!pro) {
+            return { success: false, message: 'Product not found in cart' };
+        }
+
+        // Dùng 'pro' để lọc và loại bỏ sản phẩm trong giỏ hàng
+        cart.products = cart.products.filter(p => {
+            // Kiểm tra xem sản phẩm hiện tại có trùng với sản phẩm tìm được không
+            return !(p.product_id.toString() === pro.product_id.toString() && p.unit_id.toString() === pro.unit_id.toString());
+        });
+
+        console.log('Updated cart products:', cart.products);
+
+        // Lưu giỏ hàng sau khi cập nhật
         await cart.save();
 
         return { success: true, message: 'Product removed from cart' };
-    }
-    catch (error) {
+    } catch (error) {
         return { success: false, message: error.message };
     }
-}
+};
+
+
+
+
 const updateProductCart = async (accountId, productId, unitId, quantity) => {
     try {
         // Tìm giỏ hàng của người dùng
