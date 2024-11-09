@@ -50,10 +50,10 @@ async function getCartById(accountId) {
 
 async function addProductToCart(accountId, productId, unitId, quantity, total) {
     try {
-       
+
         // Tìm giỏ hàng của người dùng
         let product = await Product.findById(productId)
-        
+
         let cart = await Cart.findOne({ account_id: accountId });
         let priceInfo = await ProductPriceDetail.findOne({
             item_code: product.item_code,
@@ -63,7 +63,7 @@ async function addProductToCart(accountId, productId, unitId, quantity, total) {
                 path: "productPriceHeader_id",
                 match: { status: "active" }, // Only include active ProductPriceHeader
             });
-       
+
         // Nếu giỏ hàng chưa tồn tại, tạo giỏ hàng mới
         if (!cart) {
             cart = new Cart({ account_id: accountId, products: [] });
@@ -101,18 +101,18 @@ async function updateCart(accountId, productList) {
             cart = new Cart({ account_id: accountId, products: [] });
         }
 
-        console.log('222',productList);
+        console.log('222', productList);
         console.log(cart);
         // Duyệt qua danh sách sản phẩm từ đầu vào
         productList.forEach((product) => {
             // Tìm sản phẩm trong giỏ hàng hiện tại
             const existingProduct = cart.products.find(
                 (item) => item.product_id.toString() === product.product_id._id.toString() &&
-                          item.unit_id.toString() === product.unit._id.toString()
+                    item.unit_id.toString() === product.unit._id.toString()
             );
 
             if (existingProduct) {
-                console.log('111',existingProduct)
+                console.log('111', existingProduct)
                 existingProduct.quantity = product.quantity;
                 existingProduct.total = product.total;
             }
@@ -174,14 +174,14 @@ async function payCart(customerId, products, paymentMethod, paymentInfo, payment
 
         for (const product of products) {
             // Lấy thông tin khuyến mãi cho từng sản phẩm
-            const promotions = await promotionService.getPromotionByProductId(product.product_id._id,product.unit._id); // Thay đổi để lấy theo ID sản phẩm
-console.log('promotionss',promotions)
+            const promotions = await promotionService.getPromotionByProductId(product.product_id._id, product.unit._id); // Thay đổi để lấy theo ID sản phẩm
+            console.log('promotionss', promotions)
             const invoiceSaleDetail = {
-                    product: product.product_id._id, // ID sản phẩm
-                    quantity: product.quantity, // Số lượng
-                    unit_id:product.unit._id,
-                    price: product.price.price, // Giá sản phẩm
-                    promotion:promotions.length > 0 ? promotions[0]._id : null,
+                product: product.product_id._id, // ID sản phẩm
+                quantity: product.quantity, // Số lượng
+                unit_id: product.unit._id,
+                price: product.price.price, // Giá sản phẩm
+                promotion: promotions.length > 0 ? promotions[0]._id : null,
             };
 
             invoiceSaleDetails.push(invoiceSaleDetail);
@@ -198,6 +198,7 @@ console.log('promotionss',promotions)
         for (const item of products) {
             const transactionInventory = new TransactionInventory({
                 product_id: item.product_id,
+                unit_id: item.unit._id,
                 quantity: item.quantity,
                 type: 'Bán hàng',
                 order_customer_id: invoiceSaleHeader._id,
@@ -211,7 +212,7 @@ console.log('promotionss',promotions)
         for (const product of products) {
             const pro = await Product.findById(product.product_id).session(session);
             const unit = await Unit.findById(product.unit._id).session(session);
-          
+
             const conversionFactor = unit.quantity || 1;
 
             // Tìm warehouse bằng item_code, có session
@@ -247,26 +248,26 @@ console.log('promotionss',promotions)
     }
 }
 
-async function payCartWeb(employee,customerId, products, paymentMethod, paymentInfo, paymentAmount) {
- 
+async function payCartWeb(employee, customerId, products, paymentMethod, paymentInfo, paymentAmount) {
+
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
         // Conditionally set customer_id only if customerId is not null
         const invoiceSaleHeaderData = {
-          
+
             paymentInfo: paymentInfo,
             paymentMethod: paymentMethod,
             paymentAmount: paymentAmount,
         };
-        
+
         if (employee) {
-           
+
             invoiceSaleHeaderData.employee_id = employee._id;
         }
         if (customerId) {
-           
+
             invoiceSaleHeaderData.customer_id = customerId;
         }
 
@@ -276,18 +277,18 @@ async function payCartWeb(employee,customerId, products, paymentMethod, paymentI
         const invoiceSaleDetails = []; // Initialize the array to hold invoice sale details
 
         for (const product of products) {
-        
-                const invoiceSaleDetail = {
-                    product: product._id, // ID sản phẩm
-                    quantity: product.quantity, // Số lượng
-                    unit_id:product.price.unit._id,
-                    price: product.price.price, // Giá sản phẩm
-                    promotion: product.promotion? product.promotion._id : null, // ID khuyến mãi nếu có
-                    discountAmount:  product.promotion? product.discountAmount : 0
-                };
-        
-                // Push the detail into the invoice sale details array
-                invoiceSaleDetails.push(invoiceSaleDetail);
+
+            const invoiceSaleDetail = {
+                product: product._id, // ID sản phẩm
+                quantity: product.quantity, // Số lượng
+                unit_id: product.price.unit._id,
+                price: product.price.price, // Giá sản phẩm
+                promotion: product.promotion ? product.promotion._id : null, // ID khuyến mãi nếu có
+                discountAmount: product.promotion ? product.discountAmount : 0
+            };
+
+            // Push the detail into the invoice sale details array
+            invoiceSaleDetails.push(invoiceSaleDetail);
         }
 
         const newInvoiceSaleDetail = new InvoiceSaleDetail({
@@ -299,7 +300,7 @@ async function payCartWeb(employee,customerId, products, paymentMethod, paymentI
         for (const item of products) {
             const transactionInventory = new TransactionInventory({
                 product_id: item._id,
-                unit_id:item.unit._id,
+                unit_id: item.unit._id,
                 quantity: item.quantity,
                 type: 'Bán hàng',
                 order_customer_id: invoiceSaleHeader._id,
@@ -310,13 +311,13 @@ async function payCartWeb(employee,customerId, products, paymentMethod, paymentI
         for (const product of products) {
             const pro = await Product.findById(product._id).session(session);
             const unit = await Unit.findById(product.unit._id).session(session);
-          
+
             const conversionFactor = unit.quantity || 1;
             const warehouse = await Warehouse.findOne({
                 item_code: pro.item_code,
                 unit_id: unit._id
             }).session(session);
-            
+
             const quantityToAdd = product.quantity * conversionFactor;
 
             console.log('Số lượng cập nhật:', quantityToAdd);
@@ -330,7 +331,7 @@ async function payCartWeb(employee,customerId, products, paymentMethod, paymentI
         await session.commitTransaction();
         session.endSession();
 
-        return { success: true, message: 'Thanh toán thành công' ,data: invoiceSaleHeader};
+        return { success: true, message: 'Thanh toán thành công', data: invoiceSaleHeader };
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
@@ -381,11 +382,11 @@ const getInvoiceById = async (invoiceCode) => {
                         select: 'name' // Get details of the donated product in promotion
                     },
                     {
-                        path:'unit_id',
+                        path: 'unit_id',
                         select: 'description' // Get
                     },
                     {
-                        path:'unit_id_donate',
+                        path: 'unit_id_donate',
                         select: 'description' // Get
                     }
                 ]
@@ -602,21 +603,21 @@ const checkStockQuantityInCart = async (item_code, quantity) => {
 };
 async function getCustomerByPhone(phone) {
     try {
-      // Find the customer by phone number
-      const customer = await Customer.findOne({ phone });
-  
-      // Check if customer was found
-      if (!customer) {
-        throw new Error("Khách hàng chưa được đăng ký");
-      }
-  
-      return customer;
+        // Find the customer by phone number
+        const customer = await Customer.findOne({ phone });
+
+        // Check if customer was found
+        if (!customer) {
+            throw new Error("Khách hàng chưa được đăng ký");
+        }
+
+        return customer;
     } catch (error) {
-      console.error("Error fetching customer by phone:", error.message);
-      throw new Error("Xảy ra lỗi khi tìm thông tin khách hàng"); // Preserve the original error message
+        console.error("Error fetching customer by phone:", error.message);
+        throw new Error("Xảy ra lỗi khi tìm thông tin khách hàng"); // Preserve the original error message
     }
-  }
-  
+}
+
 module.exports = {
     payCartWeb,
     getCartById,
