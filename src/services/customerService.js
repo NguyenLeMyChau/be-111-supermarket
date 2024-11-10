@@ -585,9 +585,9 @@ const getInvoicesByAccountId = async (accountId) => {
     }
 };
 
-const checkStockQuantityInCart = async (item_code, quantity) => {
+const checkStockQuantityInCart = async (item_code, unit_id, quantity) => {
     try {
-        const warehouse = await Warehouse.findOne({ item_code: item_code });
+        const warehouse = await Warehouse.findOne({ item_code: item_code, unit_id: unit_id });
         if (!warehouse) {
             return { inStock: false, message: `Warehouse with item_code ${item_code} not found` };
         }

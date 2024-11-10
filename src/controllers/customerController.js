@@ -1,5 +1,5 @@
 
-const { getInvoiceById,addProductToCart, getCartById, payCart, updateCart, removeProductCart, updateProductCart, updateCustomerInfo, getInvoicesByAccountId, checkStockQuantityInCart, getAllPromotionActive ,payCartWeb, getCustomerByPhone, getInvoiceLast} = require("../services/customerService");
+const { getInvoiceById, addProductToCart, getCartById, payCart, updateCart, removeProductCart, updateProductCart, updateCustomerInfo, getInvoicesByAccountId, checkStockQuantityInCart, getAllPromotionActive, payCartWeb, getCustomerByPhone, getInvoiceLast } = require("../services/customerService");
 
 async function getCartByIdController(req, res) {
     try {
@@ -14,8 +14,8 @@ async function getCartByIdController(req, res) {
 
 async function addProductToCartController(req, res) {
     try {
-        const { accountId, productId,unitId, quantity, total } = req.body;
-        const cart = await addProductToCart(accountId, productId,unitId, quantity, total);
+        const { accountId, productId, unitId, quantity, total } = req.body;
+        const cart = await addProductToCart(accountId, productId, unitId, quantity, total);
         res.status(200).json(cart);
     } catch (error) {
         console.error(`Error add product to cart: ${error.message}`);
@@ -45,7 +45,7 @@ async function payCartController(req, res) {
 }
 async function payCartWebController(req, res) {
     try {
-        const {employee, customerId,
+        const { employee, customerId,
             products,
             paymentMethod,
             paymentInfo,
@@ -76,8 +76,8 @@ async function updateCartController(req, res) {
 
 async function removeProductCartController(req, res) {
     try {
-        const { accountId, productId ,unit_id} = req.body;
-        const cart = await removeProductCart(accountId, productId,unit_id);
+        const { accountId, productId, unit_id } = req.body;
+        const cart = await removeProductCart(accountId, productId, unit_id);
         res.status(200).json(cart);
     } catch (error) {
         console.error(`Error remove product from cart: ${error.message}`);
@@ -121,8 +121,8 @@ async function getInvoicesByAccountIdController(req, res) {
 
 const checkStockQuantityInCartController = async (req, res) => {
     try {
-        const { item_code, quantity } = req.query;
-        const cart = await checkStockQuantityInCart(item_code, quantity);
+        const { item_code, unit_id, quantity } = req.query;
+        const cart = await checkStockQuantityInCart(item_code, unit_id, quantity);
         res.status(200).json(cart);
     } catch (error) {
         console.error(`Error check stock quantity in cart: ${error.message}`);
@@ -132,36 +132,36 @@ const checkStockQuantityInCartController = async (req, res) => {
 
 async function getCustomerByPhoneController(req, res) {
     const { phone } = req.params;
-  
+
     try {
-      // Call service to fetch customer by phone
-      const customer = await getCustomerByPhone(phone);
-  
-      // If customer is found, return it as the response
-      res.status(200).json({
-        success: true,
-        message: "Customer found",
-        data: customer,
-      });
+        // Call service to fetch customer by phone
+        const customer = await getCustomerByPhone(phone);
+
+        // If customer is found, return it as the response
+        res.status(200).json({
+            success: true,
+            message: "Customer found",
+            data: customer,
+        });
     } catch (error) {
-      // Check the specific error message to determine the response
-      if (error.message === "Phone number not registered.") {
-        res.status(404).json({
-          success: false,
-          message: "Phone number not registered",
-        });
-      } else {
-        // Handle other errors
-        console.error("Error fetching customer:", error);
-        res.status(500).json({
-          success: false,
-          message: error.message,
-          data: []
-        });
-      }
+        // Check the specific error message to determine the response
+        if (error.message === "Phone number not registered.") {
+            res.status(404).json({
+                success: false,
+                message: "Phone number not registered",
+            });
+        } else {
+            // Handle other errors
+            console.error("Error fetching customer:", error);
+            res.status(500).json({
+                success: false,
+                message: error.message,
+                data: []
+            });
+        }
     }
-  }
-  const getInvoiceByCode = async (req, res) => {
+}
+const getInvoiceByCode = async (req, res) => {
     const { invoiceCode } = req.params; // Lấy mã hóa đơn từ URL
 
     try {
