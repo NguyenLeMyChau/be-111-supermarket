@@ -451,18 +451,18 @@ const removeProductCart = async (accountId, productId, unitId) => {
 
 
 
-const updateProductCart = async (accountId, productId, unitId, quantity) => {
+const updateProductCart = async (accountId, productId, unitId, quantity,total) => {
     try {
         // Tìm giỏ hàng của người dùng
-        let cart = await Cart.findOne({ account_id: accountId });
-
+        let cart = await Cart.findOne({ account_id: accountId })
         // Cập nhật số lượng sản phẩm trong giỏ hàng
-        const productIndex = cart.products.findIndex(p => p.product_id.toString() === productId && p.unit_id.toString() === unitId);
+        const productIndex = cart.products.findIndex(p => p.product_id.toString() === productId._id && p.unit_id.toString() === unitId);
 
         if (productIndex > -1) {
+            // Nếu sản phẩm đã tồn tại, cập nhật số lượng sản phẩm và giá
             cart.products[productIndex].quantity = quantity;
-        }
 
+        }
         // Lưu lại giỏ hàng đã được cập nhật
         await cart.save();
 

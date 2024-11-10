@@ -87,8 +87,8 @@ async function removeProductCartController(req, res) {
 
 async function updateProductCartController(req, res) {
     try {
-        const { accountId, productId, quantity, total } = req.body;
-        const cart = await updateProductCart(accountId, productId, quantity, total);
+        const { accountId, productId,  unitId, quantity, total } = req.body;
+        const cart = await updateProductCart(accountId, productId,unitId, quantity, total);
         res.status(200).json(cart);
     } catch (error) {
         console.error(`Error update product in cart: ${error.message}`);
