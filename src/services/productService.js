@@ -611,6 +611,7 @@ async function getAllProductsWithPriceAndPromotionNoCategory() {
         }
 
         // Construct the product data
+        const image = product.unit_convert.find((unit) => unit.unit.equals(priceDetail.unit_id._id));
         productsList.push({
           _id: product._id,
           name: product.name,
@@ -618,10 +619,11 @@ async function getAllProductsWithPriceAndPromotionNoCategory() {
           category_id: product.category_id ? product.category_id._id : null,
           barcode: product.barcode,
           unit_id: priceDetail.unit_id,
-          img: product.img,
+          img: image?.img,
           price: priceDetail.price,
           priceDetail: priceDetail,
           promotions: promotions,
+          unit_convert: product.unit_convert,
         });
       }
     }
