@@ -281,8 +281,8 @@ async function payCartWeb(employee, customerId, products, paymentMethod, payment
             const invoiceSaleDetail = {
                 product: product._id, // ID sản phẩm
                 quantity: product.quantity, // Số lượng
-                unit_id: product.price.unit._id,
-                price: product.price.price, // Giá sản phẩm
+                unit_id: product.unit._id,
+                price: product.price, // Giá sản phẩm
                 promotion: product.promotion ? product.promotion._id : null, // ID khuyến mãi nếu có
                 discountAmount: product.promotion ? product.discountAmount : 0
             };
@@ -335,6 +335,7 @@ async function payCartWeb(employee, customerId, products, paymentMethod, payment
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
+        console.log(error);
         return { success: false, message: error.message };
     }
 }
