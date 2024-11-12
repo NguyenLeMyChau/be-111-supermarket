@@ -4,5 +4,6 @@ const router = express.Router();
 
 
 router.get('/get-all-invoice', invoiceController.getAllInvoicesController);
+router.put('/update-status-order', invoiceController.updateStatusOrderController);
 
 module.exports = router;

@@ -71,7 +71,7 @@ const getAllInvoices = async () => {
                 total,
                 productName: product ? product.name : 'Unknown',
                 productImg: product ? product.img : null,
-                unitName: unit ? unit.description : 'Unknown',
+                unit: unit ? unit : 'Unknown',
                 item_code: product ? product.item_code : 'Unknown'
             };
         }));;
@@ -87,6 +87,15 @@ const getAllInvoices = async () => {
     return invoices;
 };
 
+const updateStatusOrder = async (invoice_id, status) => {
+    const invoice = await InvoiceSaleHeader.findOne({ _id: invoice_id });
+    if (invoice) {
+        invoice.status = status;
+        await invoice.save();
+    }
+};
+
 module.exports = {
-    getAllInvoices
+    getAllInvoices,
+    updateStatusOrder
 };

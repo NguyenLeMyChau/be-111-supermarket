@@ -166,6 +166,7 @@ async function payCart(customerId, products, paymentMethod, paymentInfo, payment
             paymentInfo: paymentInfo,
             paymentMethod: paymentMethod,
             paymentAmount: paymentAmount,
+            status: 'Chờ xử lý',
         });
         await invoiceSaleHeader.save({ session });
 
@@ -452,7 +453,7 @@ const removeProductCart = async (accountId, productId, unitId) => {
 
 
 
-const updateProductCart = async (accountId, productId, unitId, quantity,total) => {
+const updateProductCart = async (accountId, productId, unitId, quantity, total) => {
     try {
         // Tìm giỏ hàng của người dùng
         let cart = await Cart.findOne({ account_id: accountId })
@@ -509,7 +510,7 @@ const getInvoicesByAccountId = async (accountId) => {
             // Duyệt qua products bên trong detail
             const productsWithInfo = await Promise.all(detail.products.map(async (item) => {
                 const product = await Product.findById(item.product).select('name img unit_id').lean();
-                const unit = await Unit.findById(product?.unit_id).select('description').lean();
+                const unit = await Unit.findById(item?.unit_id).select('description').lean();
                 const promotionDetail = await PromotionDetail.findOne({ _id: item.promotion }).lean() || {};
                 let promotionLine = {};
 
@@ -568,7 +569,7 @@ const getInvoicesByAccountId = async (accountId) => {
                     total,
                     productName: product ? product.name : 'Unknown',
                     productImg: product ? product.img : null,
-                    unitName: unit ? unit.description : 'Unknown'
+                    unit: unit ? unit : 'Unknown'
                 };
             }));
 

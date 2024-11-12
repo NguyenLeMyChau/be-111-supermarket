@@ -1,5 +1,5 @@
 const { get } = require("mongoose");
-const { getAllInvoices } = require("../services/invoiceService");
+const { getAllInvoices, updateStatusOrder } = require("../services/invoiceService");
 
 
 const getAllInvoicesController = async (req, res) => {
@@ -11,6 +11,17 @@ const getAllInvoicesController = async (req, res) => {
     }
 }
 
+const updateStatusOrderController = async (req, res) => {
+    try {
+        const { invoice_id, status } = req.body;
+        await updateStatusOrder(invoice_id, status);
+        res.status(200).json({ message: 'Update status order successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
 module.exports = {
-    getAllInvoicesController
+    getAllInvoicesController,
+    updateStatusOrderController
 }
