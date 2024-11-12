@@ -48,7 +48,7 @@ app.use('/api/promotion', authMiddleware(['manager']), promotionRoutes);
 app.use('/api/warehouse', authMiddleware(['manager']), warehouseRoutes);
 app.use('/api/unit', authMiddleware(['manager']), unitRoutes);
 app.use('/api/price', authMiddleware(['manager']), priceRoutes);
-app.use('/api/invoice', authMiddleware(['manager']), invoiceRoutes);
+app.use('/api/invoice', authMiddleware(['manager', 'staff', 'customer']), invoiceRoutes);
 
 app.use('/api/zalo-pay', zalopay);
 
