@@ -20,16 +20,10 @@ const invoiceSaleHeaderSchema = new mongoose.Schema({
     paymentMethod: { type: String, required: true },
     paymentAmount: { type: Number, required: true },
     invoiceCode: { type: String, unique: true },  // Mã hóa đơn tự động
-    status: {
-        type: String,
-        required: true,
-        default: 'Tại quầy',
-        enum: ['Tại quầy', 'Chờ xử lý', 'Chuẩn bị hàng', 'Đang giao hàng', 'Đã nhận hàng']
-    },
-    isRefund: {type: 'boolean', default: false}
+    invoiceCodeSale:{ type: String, required: true },
 }, { timestamps: true });
 
-invoiceSaleHeaderSchema.plugin(AutoIncrement, { inc_field: 'invoiceSaleHeader_index' });
+invoiceSaleHeaderSchema.plugin(AutoIncrement, { inc_field: 'invoiceRefundHeader_index' });
 
 // Middleware để tạo mã hóa đơn tự động
 invoiceSaleHeaderSchema.pre('save', function (next) {
@@ -43,11 +37,11 @@ invoiceSaleHeaderSchema.pre('save', function (next) {
         const seconds = String(now.getSeconds()).padStart(2, '0');
 
         // Tạo mã hóa đơn với định dạng: YYYYMMDDHHMMSS
-        this.invoiceCode = `IV${year}${month}${day}${hours}${minutes}${seconds}`;
+        this.invoiceCode = `IRF${year}${month}${day}${hours}${minutes}${seconds}`;
     }
     next();
 });
 
-const InvoiceSaleHeader = mongoose.model('invoiceSale_header', invoiceSaleHeaderSchema, 'invoiceSale_header');
+const InvoiceRefundHeader = mongoose.model('invoiceRefund_header', invoiceSaleHeaderSchema, 'invoiceRefund_header');
 
-module.exports = InvoiceSaleHeader;
+module.exports = InvoiceRefundHeader;

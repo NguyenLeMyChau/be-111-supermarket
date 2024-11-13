@@ -40,7 +40,11 @@ router.post('/get-product-by-barcode',productController.getProductsByBarcodeInUn
 
 router.post('/pay-cart-web', customerController.payCartWebController);
 
+router.post('/refund-cart-web', customerController.refundWebController);
+
 router.get('/getInvoices/:invoiceCode', customerController.getInvoiceByCode);
+
+router.get('/getInvoicesRefund/:invoiceCode', customerController.getInvoiceRefundByCode);
 
 router.get('/lastInvoice', customerController.getInvoiceLastController);
 

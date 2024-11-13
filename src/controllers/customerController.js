@@ -1,5 +1,5 @@
 
-const { getInvoiceById, addProductToCart, getCartById, payCart, updateCart, removeProductCart, updateProductCart, updateCustomerInfo, getInvoicesByAccountId, checkStockQuantityInCart, getAllPromotionActive, payCartWeb, getCustomerByPhone, getInvoiceLast } = require("../services/customerService");
+const { getInvoiceById, addProductToCart, getCartById, payCart, updateCart, removeProductCart, updateProductCart, updateCustomerInfo, getInvoicesByAccountId, checkStockQuantityInCart, getAllPromotionActive, payCartWeb, getCustomerByPhone, getInvoiceLast ,refundWeb, getInvoiceRefundById} = require("../services/customerService");
 
 async function getCartByIdController(req, res) {
     try {
@@ -62,6 +62,18 @@ async function payCartWebController(req, res) {
         res.status(400).json({ message: error.message });
     }
 }
+
+async function refundWebController(req, res) {
+    try {
+        const {invoiceCode,employee } = req.body;
+        const cart = await refundWeb(invoiceCode,employee);
+        res.status(200).json(cart);
+    } catch (error) {
+        console.error(`Error pay cart: ${error.message}`);
+        res.status(400).json({ message: error.message });
+    }
+}
+
 
 async function updateCartController(req, res) {
     try {
@@ -179,6 +191,25 @@ const getInvoiceByCode = async (req, res) => {
         res.status(500).json({ message: 'Server error', error });
     }
 };
+
+const getInvoiceRefundByCode = async (req, res) => {
+    const { invoiceCode } = req.params; // Lấy mã hóa đơn từ URL
+
+    try {
+        const invoiceData = await getInvoiceRefundById(invoiceCode);
+
+        // Kiểm tra nếu không tìm thấy hóa đơn
+        if (!invoiceData.invoice) {
+            return res.status(404).json({ message: 'Không tìm thấy hóa đơn' });
+        }
+
+        // Trả về dữ liệu hóa đơn và chi tiết hóa đơn
+        res.status(200).json(invoiceData);
+    } catch (error) {
+        console.error("Error fetching invoice:", error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
 const getInvoiceLastController = async (req, res) => {
     try {
         const lastInvoice = await getInvoiceLast(); // Gọi service
@@ -204,5 +235,7 @@ module.exports = {
     payCartWebController,
     getCustomerByPhoneController,
     getInvoiceByCode,
-    getInvoiceLastController
+    getInvoiceLastController,
+    refundWebController,
+    getInvoiceRefundByCode
 };

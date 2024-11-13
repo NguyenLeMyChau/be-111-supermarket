@@ -5,6 +5,8 @@ const Product = require('../models/Product');
 const TransactionInventory = require('../models/TransactionInventory');
 const InvoiceSaleHeader = require('../models/InvoiceSale_Header');
 const InvoiceSaleDetail = require('../models/InvoiceSale_Detail');
+const InvoiceRefundHeader = require('../models/InvoiceRefund_Header');
+const InvoiceRefundDetail = require('../models/InvoiceRefund_Detail');
 const Unit = require('../models/Unit');
 const Customer = require('../models/Customer');
 const promotionService = require('./promotionService');
@@ -347,7 +349,7 @@ const getInvoiceById = async (invoiceCode) => {
         const invoice = await InvoiceSaleHeader.findOne({ invoiceCode })
             .populate({
                 path: 'customer_id',
-                select: 'name phone' // Only retrieve customer name and phone
+              
             })
             .populate({
                 path: 'employee_id',
@@ -366,11 +368,11 @@ const getInvoiceById = async (invoiceCode) => {
         const invoiceDetails = await InvoiceSaleDetail.findOne({ invoiceSaleHeader_id: invoice._id })
             .populate({
                 path: 'products.product',
-                select: 'name' // Retrieve product name only
+              
             })
             .populate({
                 path: 'products.unit_id',
-                select: 'unitName' // Retrieve unit name only
+              
             })
             .populate({
                 path: 'products.promotion',
@@ -404,7 +406,68 @@ const getInvoiceById = async (invoiceCode) => {
     }
 };
 
+const getInvoiceRefundById = async (invoiceCode) => {
+    try {
+        // Find the invoice header by invoiceCode
+        const invoice = await InvoiceRefundHeader.findOne({invoiceCode: invoiceCode })
+            .populate({
+                path: 'customer_id',
+              
+            })
+            .populate({
+                path: 'employee_id',
+                select: 'name' // Only retrieve employee name
+            })
+            .populate({
+                path: 'paymentInfo.address',
+                select: 'city district ward street' // Address details
+            });
 
+        if (!invoice) {
+            return { message: 'Invoice not found' };
+        }
+
+        // Fetch related invoice details, including nested promotion data
+        const invoiceDetails = await InvoiceRefundDetail.findOne({ invoiceRefundHeader_id: invoice._id })
+            .populate({
+                path: 'products.product',
+              
+            })
+            .populate({
+                path: 'products.unit_id',
+              
+            })
+            .populate({
+                path: 'products.promotion',
+                populate: [
+                    {
+                        path: 'product_id',
+                        select: 'name' // Get promotion's related product details
+                    },
+                    {
+                        path: 'product_donate',
+                        select: 'name' // Get details of the donated product in promotion
+                    },
+                    {
+                        path: 'unit_id',
+                        select: 'description' // Get
+                    },
+                    {
+                        path: 'unit_id_donate',
+                        select: 'description' // Get
+                    }
+                ]
+            });
+
+        return {
+            invoice,
+            invoiceDetails
+        };
+    } catch (error) {
+        console.error("Error fetching invoice:", error);
+        throw new Error("Could not retrieve the invoice. Please try again.");
+    }
+};
 
 const getInvoiceLast = async () => {
     try {
@@ -619,6 +682,108 @@ async function getCustomerByPhone(phone) {
         throw new Error("Xảy ra lỗi khi tìm thông tin khách hàng"); // Preserve the original error message
     }
 }
+async function refundWeb(invoiceCode,employee) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    const invoiceRefund = await getInvoiceById(invoiceCode);
+    console.log('Đã tìm thấy hóa đơn:', invoiceRefund);
+
+    if (!invoiceRefund || !invoiceRefund.invoice )  {
+        return { success: false, message: 'Không tìm thấy hóa đơn' };
+    }
+    if ( !invoiceRefund.invoiceDetails.products || invoiceRefund.invoiceDetails.products.length === 0 )  {
+        return { success: false, message: ' hóa đơn không có sản phẩm' };
+    }
+   
+
+    console.log('Đã tìm thấy hóa đơn:', invoiceRefund);
+    
+    try {
+        const invoiceSaleHeaderData = {
+            invoiceCodeSale: invoiceCode,
+            paymentMethod: invoiceRefund.invoice.paymentMethod,
+            paymentAmount: invoiceRefund.invoice.paymentAmount,
+            status: invoiceRefund.invoice.status,
+        };
+
+        if (employee) {
+            invoiceSaleHeaderData.employee_id = employee._id;
+        }
+        if (invoiceRefund.invoice.customer_id) {
+            invoiceSaleHeaderData.customer_id = invoiceRefund.invoice.customer_id;
+        }
+        if(invoiceRefund.invoice.paymentInfo===null){
+            invoiceSaleHeaderData.paymentInfo = invoiceRefund.invoice.paymentInfo;
+        }
+    
+        // Create new InvoiceRefundHeader and save it within the transaction
+        const invoiceSaleHeader = new InvoiceRefundHeader(invoiceSaleHeaderData);
+        await invoiceSaleHeader.save({ session });
+
+        // Create a new InvoiceRefundDetail
+        const newInvoiceSaleDetail = new InvoiceRefundDetail({
+            invoiceRefundHeader_id: invoiceSaleHeader._id,
+            products: invoiceRefund.invoiceDetails.products,
+        });
+        await newInvoiceSaleDetail.save({ session });
+
+        await InvoiceSaleHeader.updateOne(
+            { invoiceCode: invoiceCode },
+            { $set: { isRefund: true } },
+            { session }
+        );
+
+        // Process each product for refund and inventory transaction
+        for (const item of invoiceRefund.invoiceDetails.products) {
+            const transactionInventory = new TransactionInventory({
+                product_id: item.product._id,
+                unit_id: item.unit_id._id,
+                quantity: item.quantity,
+                type: 'Trả hàng',  // Type of transaction
+                order_customer_id: invoiceSaleHeader._id,
+            });
+            await transactionInventory.save({ session });
+
+            // Update stock in Warehouse
+            const pro = await Product.findById(item.product._id).session(session);
+            const unit = await Unit.findById(item.unit_id._id).session(session);
+
+            if (!pro || !unit) {
+                throw new Error(`Không tìm thấy sản phẩm hoặc đơn vị cho mã sản phẩm ${item.product._id}`);
+            }
+
+            const conversionFactor = unit.quantity || 1;
+            const warehouse = await Warehouse.findOne({
+                item_code: pro.item_code,
+                unit_id: unit._id
+            }).session(session);
+
+            if (!warehouse) {
+                throw new Error(`Không tìm thấy kho cho sản phẩm ${pro.item_code}`);
+            }
+
+            const quantityToAdd = item.quantity * conversionFactor;
+            console.log('Số lượng cập nhật:', quantityToAdd);
+            console.log(`Trước cập nhật của ${warehouse.item_code}: ${warehouse.stock_quantity}`);
+            warehouse.stock_quantity += quantityToAdd;
+            console.log(`Sau cập nhật của ${warehouse.item_code}: ${warehouse.stock_quantity}`);
+
+            await warehouse.save({ session });
+        }
+
+        // Commit the transaction after all operations
+        await session.commitTransaction();
+        session.endSession();
+
+        return { success: true, message: 'Hoàn tiền thành công', data: invoiceSaleHeader };
+    } catch (error) {
+        // Abort the transaction in case of error
+        await session.abortTransaction();
+        session.endSession();
+        console.log(error);
+        return { success: false, message: `Hoàn tiền thất bại: ${error.message}` };
+    }
+}
 
 module.exports = {
     payCartWeb,
@@ -633,6 +798,8 @@ module.exports = {
     checkStockQuantityInCart,
     getCustomerByPhone,
     getInvoiceById,
-    getInvoiceLast
+    getInvoiceLast,
+    refundWeb,
+    getInvoiceRefundById
 }
 
