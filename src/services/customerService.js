@@ -251,7 +251,7 @@ async function payCart(customerId, products, paymentMethod, paymentInfo, payment
     }
 }
 
-async function payCartWeb(employee, customerId, products, paymentMethod, paymentInfo, paymentAmount) {
+async function payCartWeb(employee, customerId, products, paymentMethod, paymentInfo, paymentAmount,promotionOnInvoice) {
 
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -296,6 +296,7 @@ async function payCartWeb(employee, customerId, products, paymentMethod, payment
 
         const newInvoiceSaleDetail = new InvoiceSaleDetail({
             invoiceSaleHeader_id: invoiceSaleHeader._id,
+            promotionOnInvoice: promotionOnInvoice,
             products: invoiceSaleDetails,
         });
         await newInvoiceSaleDetail.save({ session });
@@ -392,6 +393,8 @@ const getInvoiceById = async (invoiceCode) => {
                     {
                         path: 'unit_id_donate',
                         select: 'description' // Get
+                    },{
+                        path:'promotionLine_id'
                     }
                 ]
             });
@@ -455,6 +458,8 @@ const getInvoiceRefundById = async (invoiceCode) => {
                     {
                         path: 'unit_id_donate',
                         select: 'description' // Get
+                    },{
+                        path:'promotionLine_id',
                     }
                 ]
             });
@@ -723,6 +728,7 @@ async function refundWeb(invoiceCode,employee) {
         // Create a new InvoiceRefundDetail
         const newInvoiceSaleDetail = new InvoiceRefundDetail({
             invoiceRefundHeader_id: invoiceSaleHeader._id,
+            promotionOnInvoice: invoiceRefund.invoiceDetails?.promotionOnInvoice,
             products: invoiceRefund.invoiceDetails.products,
         });
         await newInvoiceSaleDetail.save({ session });

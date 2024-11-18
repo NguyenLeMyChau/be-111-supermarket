@@ -3,6 +3,11 @@ const AutoIncrement = require('mongoose-sequence')(mongoose);
 
 const invoiceSaleDetailSchema = new mongoose.Schema({
     invoiceSaleHeader_id: { type: mongoose.Schema.Types.ObjectId, ref: 'invoiceSale_header', required: true },
+    promotionOnInvoice: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'promotion_detail', 
+        default: null 
+    },
     products:[{
         product: { type: mongoose.Schema.Types.ObjectId, ref: 'product', required: true },
         unit_id: { type: mongoose.Schema.Types.ObjectId, ref: 'unit' },
