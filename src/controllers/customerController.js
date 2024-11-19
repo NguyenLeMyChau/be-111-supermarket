@@ -66,8 +66,8 @@ async function payCartWebController(req, res) {
 
 async function refundWebController(req, res) {
     try {
-        const {invoiceCode,employee } = req.body;
-        const cart = await refundWeb(invoiceCode,employee);
+        const {invoiceCode,employee,refundReason } = req.body;
+        const cart = await refundWeb(invoiceCode,employee,refundReason);
         res.status(200).json(cart);
     } catch (error) {
         console.error(`Error pay cart: ${error.message}`);

@@ -28,8 +28,8 @@ router.post('/payment', async (req, res) => {
         app_time: Date.now(), // miliseconds
         item: JSON.stringify(items),
         embed_data: JSON.stringify(embed_data),
-        amount: 50000,
-        description: `Lazada - Payment for the order #${transID}`,
+        amount: 10000,
+        description: `Capy - thanh toán hóa đơn #${transID}`,
         bank_code: "",
         callback_url: "https://6796-171-252-189-212.ngrok-free.app/api/zalo-pay/callback"
     };

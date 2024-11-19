@@ -21,6 +21,7 @@ const invoiceSaleHeaderSchema = new mongoose.Schema({
     paymentAmount: { type: Number, required: true },
     invoiceCode: { type: String, unique: true },  // Mã hóa đơn tự động
     invoiceCodeSale:{ type: String, required: true },
+    refundReason:{ type: String, trim: true}
 }, { timestamps: true });
 
 invoiceSaleHeaderSchema.plugin(AutoIncrement, { inc_field: 'invoiceRefundHeader_index' });

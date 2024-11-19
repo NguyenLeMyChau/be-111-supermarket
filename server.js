@@ -38,6 +38,7 @@ const uploadRoutes = require('./src/routes/uploadRoutes');
 const priceRoutes = require('./src/routes/priceRoutes');
 const invoiceRoutes = require('./src/routes/invoiceRoutes');
 const zalopay = require('./src/payment/zalopay/ZaloPay');
+const payment = require('./src/routes/paymentWebRoute');
 
 // ROUTES Manager
 app.use('/api/auth', authRoutes);
@@ -49,8 +50,8 @@ app.use('/api/warehouse', authMiddleware(['manager']), warehouseRoutes);
 app.use('/api/unit', authMiddleware(['manager']), unitRoutes);
 app.use('/api/price', authMiddleware(['manager']), priceRoutes);
 app.use('/api/invoice', authMiddleware(['manager', 'staff', 'customer']), invoiceRoutes);
-
 app.use('/api/zalo-pay', zalopay);
+app.use('/api/payment',payment);
 
 // ROUTES Customer
 app.use('/api/customer', authMiddleware(['customer']), customerRoutes);
@@ -77,6 +78,7 @@ app.listen(PORT, () => {
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Hello, this is a test API!' });
 });
+
 
 app.get('/', (req, res) => {
   res.json({ message: 'Hello, welcome to supermarket' });
