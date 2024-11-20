@@ -22,6 +22,7 @@ async function getAllEmployee() {
     }
 }
 
+
 async function updateEmployee(employeeId, employeeData) {
     try {
         const employee = await Employee.findById(employeeId);
@@ -91,10 +92,32 @@ async function updateCustomer(customerId, customerData) {
     }
 }
 
+async function getAllEmployeeAndManager() {
+    try {
+        const accounts = await Account.find({ role: { $in: ['staff', 'manager'] } });
+
+        const employees = await Promise.all(accounts.map(async (account) => {
+            const employee = await Employee.findOne({ account_id: account._id });
+            if (employee) {
+                const employeeObj = employee.toObject();
+                employeeObj.active = account.active;
+                employeeObj.role = account.role; // Thêm thông tin role vào đối tượng employee
+                return employeeObj;
+            }
+            return null;
+        }));
+
+        return employees.filter(employee => employee !== null);
+    } catch (err) {
+        throw new Error(`Error getting all employees: ${err.message}`);
+    }
+}
+
 
 module.exports = {
     getAllEmployee,
     updateEmployee,
     getAllCustomer,
-    updateCustomer
+    updateCustomer,
+    getAllEmployeeAndManager
 };
