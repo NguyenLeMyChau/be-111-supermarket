@@ -16,9 +16,9 @@ const config = {
 
 router.post('/payment', async (req, res) => {
     const embed_data = {
-        redirecturl: 'https://fe-111-supermarket.vercel.app/login'
+        redirecturl: `${process.env.CLIENT_URL}/frame-staff/payment`,
     };
-
+    let amountPay = req.body.amount;
     const items = [{}];
     const transID = Math.floor(Math.random() * 1000000);
     const order = {
@@ -28,10 +28,13 @@ router.post('/payment', async (req, res) => {
         app_time: Date.now(), // miliseconds
         item: JSON.stringify(items),
         embed_data: JSON.stringify(embed_data),
-        amount: 10000,
+        amount: amountPay,
         description: `Capy - thanh toán hóa đơn #${transID}`,
         bank_code: "",
-        callback_url: "https://6796-171-252-189-212.ngrok-free.app/api/zalo-pay/callback"
+        // callback_url: "https://6796-171-252-189-212.ngrok-free.app/api/zalo-pay/callback"
+         callback_url: `${process.env.URL_CALLBACK}/api/zalo-pay/callback`,
+        //  callback_url: "https://1c7b-116-111-184-13.ngrok-free.app/api/zalo-pay/callback"
+
     };
 
     // appid|app_trans_id|appuser|amount|apptime|embeddata|item
