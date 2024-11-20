@@ -74,7 +74,8 @@ const getAllInvoices = async () => {
                 productName: product ? product.name : 'Unknown',
                 productImg: product ? product.img : null,
                 unit: unit ? unit : 'Unknown',
-                item_code: product ? product.item_code : 'Unknown'
+                item_code: product ? product.item_code : 'Unknown',
+
             };
         }));;
 
@@ -82,7 +83,8 @@ const getAllInvoices = async () => {
         return {
             ...header.toObject(),
             customerName: customer ? customer.name : 'Unknown',
-            details: productsWithInfo
+            details: productsWithInfo,
+            promotionOnInvoice: detail.promotionOnInvoice ? detail.promotionOnInvoice : null
         };
 
     }));
@@ -162,7 +164,8 @@ const getAllInvoicesRefund = async () => {
         return {
             ...header.toObject(),
             customerName: customer ? customer.name : 'Unknown',
-            details: productsWithInfo
+            details: productsWithInfo,
+            promotionOnInvoice: detail.promotionOnInvoice ? detail.promotionOnInvoice : null
         };
 
     }));
