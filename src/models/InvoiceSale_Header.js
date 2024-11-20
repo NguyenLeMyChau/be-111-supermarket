@@ -18,6 +18,8 @@ const invoiceSaleHeaderSchema = new mongoose.Schema({
         gender: { type: Boolean, trim: true }
     },
     paymentMethod: { type: String, required: true },
+    discountPayment: { type: Number, required: true },
+    totalPayment:{ type: Number, required: true },
     paymentAmount: { type: Number, required: true },
     invoiceCode: { type: String, unique: true },  // Mã hóa đơn tự động
     status: {

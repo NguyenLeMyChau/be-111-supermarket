@@ -19,6 +19,8 @@ const invoiceSaleHeaderSchema = new mongoose.Schema({
     },
     paymentMethod: { type: String, required: true },
     paymentAmount: { type: Number, required: true },
+    discountPayment: { type: Number, required: true },
+    totalPayment:{ type: Number, required: true },
     invoiceCode: { type: String, unique: true },  // Mã hóa đơn tự động
     invoiceCodeSale:{ type: String, required: true },
     refundReason:{ type: String, trim: true}

@@ -21,7 +21,8 @@ async function getCartById(accountId) {
     const cart = await Cart.findOne({ account_id: accountId })
       .populate("products.product_id") // populate sản phẩm trong giỏ hàng
       .populate("products.unit_id") // populate đơn vị sản phẩm
-      .populate("products.price");
+      .populate("products.price")
+      .populate("products.promotions");
     if (!cart) {
       throw new Error(`Cart not found for account ID: ${accountId}`);
     }
@@ -43,6 +44,7 @@ async function getCartById(accountId) {
           price: product.price,
           unit: product.unit_id,
           total: product.total,
+          promotions: product.promotions,
         };
       })
     );
@@ -53,9 +55,10 @@ async function getCartById(accountId) {
   }
 }
 
-async function addProductToCart(accountId, productId, unitId, quantity, total) {
+async function addProductToCart(accountId, productId, unitId, quantity, total,promotions) {
   try {
     // Tìm giỏ hàng của người dùng
+    console.log(promotions?._id)
     let product = await Product.findById(productId);
 
     let cart = await Cart.findOne({ account_id: accountId });
@@ -83,6 +86,8 @@ async function addProductToCart(accountId, productId, unitId, quantity, total) {
       cart.products[productIndex].quantity += quantity;
       cart.products[productIndex].price = priceInfo._id;
       cart.products[productIndex].total = total;
+      if(promotions) cart.products[productIndex].promotions = promotions?._id;
+    
     } else {
       // Nếu sản phẩm chưa tồn tại, thêm sản phẩm mới vào giỏ hàng
       cart.products.push({
@@ -91,6 +96,7 @@ async function addProductToCart(accountId, productId, unitId, quantity, total) {
         quantity: quantity,
         price: priceInfo._id,
         total: total,
+        promotions: promotions?._id,
       });
     }
 
@@ -128,6 +134,8 @@ async function updateCart(accountId, productList) {
         console.log("111", existingProduct);
         existingProduct.quantity = product.quantity;
         existingProduct.total = product.total;
+        existingProduct.quantity_donate=product.quantity_donate;
+        existingProduct.promotions=product.promotions;
       }
     });
 
@@ -162,7 +170,9 @@ async function payCart(
   products,
   paymentMethod,
   paymentInfo,
-  paymentAmount
+  paymentAmount,
+  discountPayment,
+  totalPayment
 ) {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -183,6 +193,8 @@ async function payCart(
       paymentInfo: paymentInfo,
       paymentMethod: paymentMethod,
       paymentAmount: paymentAmount,
+      discountPayment:discountPayment,
+      totalPayment:totalPayment,
       status: "Chờ xử lý",
     });
     await invoiceSaleHeader.save({ session });
@@ -305,7 +317,9 @@ async function payCartWeb(
   paymentMethod,
   paymentInfo,
   paymentAmount,
-  promotionOnInvoice
+  promotionOnInvoice,
+  discountPayment,
+  totalPayment
 ) {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -316,6 +330,8 @@ async function payCartWeb(
       paymentInfo: paymentInfo,
       paymentMethod: paymentMethod,
       paymentAmount: paymentAmount,
+      discountPayment:discountPayment,
+      totalPayment:totalPayment
     };
 
     if (employee) {
@@ -852,6 +868,8 @@ async function refundWeb(invoiceCode, employee, refundReason) {
       invoiceCodeSale: invoiceCode,
       paymentMethod: invoiceRefund.invoice.paymentMethod,
       paymentAmount: invoiceRefund.invoice.paymentAmount,
+      discountPayment: invoiceRefund.invoice.discountPayment,
+      totalPayment:invoiceRefund.invoice.totalPayment,
       status: invoiceRefund.invoice.status,
       refundReason: refundReason,
     };

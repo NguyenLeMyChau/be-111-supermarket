@@ -14,8 +14,8 @@ async function getCartByIdController(req, res) {
 
 async function addProductToCartController(req, res) {
     try {
-        const { accountId, productId, unitId, quantity, total } = req.body;
-        const cart = await addProductToCart(accountId, productId, unitId, quantity, total);
+        const { accountId, productId, unitId, quantity, total,promotions } = req.body;
+        const cart = await addProductToCart(accountId, productId, unitId, quantity, total,promotions);
         res.status(200).json(cart);
     } catch (error) {
         console.error(`Error add product to cart: ${error.message}`);
@@ -30,13 +30,15 @@ async function payCartController(req, res) {
             paymentMethod,
             paymentInfo,
 
-            paymentAmount } = req.body;
+            paymentAmount,promotionOnInvoice,discountPayment,
+            totalPayment } = req.body;
         const cart = await payCart(customerId,
             products,
             paymentMethod,
             paymentInfo,
 
-            paymentAmount);
+            paymentAmount,promotionOnInvoice,discountPayment,
+            totalPayment);
         res.status(200).json(cart);
     } catch (error) {
         console.error(`Error pay cart: ${error.message}`);
@@ -49,14 +51,16 @@ async function payCartWebController(req, res) {
             products,
             paymentMethod,
             paymentInfo,
-            paymentAmount,promotionOnInvoice } = req.body;
+            paymentAmount,promotionOnInvoice , discountPayment,
+            totalPayment} = req.body;
         const cart = await payCartWeb(employee,
             customerId,
             products,
             paymentMethod,
             paymentInfo,
             paymentAmount,
-            promotionOnInvoice);
+            promotionOnInvoice,discountPayment,
+            totalPayment);
         res.status(200).json(cart);
     } catch (error) {
         console.error(`Error pay cart: ${error.message}`);

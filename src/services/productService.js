@@ -441,6 +441,7 @@ async function getAllProductsWithPriceAndPromotion() {
             for (const promoDetail of promoDetails) {
               if ((promoDetail.product_id && promoDetail.product_id.equals(product._id)) && (promoDetail.unit_id && promoDetail.unit_id.equals(priceDetail.unit_id._id)) || (promoDetail.product_donate && promoDetail.product_donate.equals(product._id)) && (promoDetail.unit_id_donate && promoDetail.unit_id_donate.equals(priceDetail.unit_id._id))) {
                 promotions.push({
+                  _id: promoDetail._id,
                   header: promoHeader.description,
                   line: promoLine.description,
                   type: promoLine.type,
@@ -588,6 +589,7 @@ async function getAllProductsWithPriceAndPromotionNoCategory() {
                 (promoDetail.product_donate && promoDetail.product_donate.equals(product._id) && promoDetail.unit_id_donate.equals(priceDetail.unit_id._id))
               ) {
                 promotions.push({
+                  _id:promoDetail._id,
                   header: promoHeader.description,
                   line: promoLine.description,
                   type: promoLine.type,
