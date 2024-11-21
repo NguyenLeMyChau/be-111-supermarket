@@ -12,9 +12,9 @@ const invoiceSaleDetailSchema = new mongoose.Schema({
         product: { type: mongoose.Schema.Types.ObjectId, ref: 'product', required: true },
         unit_id: { type: mongoose.Schema.Types.ObjectId, ref: 'unit' },
         quantity: { type: Number, required: true },
-        quantity_donate: { type: Number, trim: true },
+        quantity_donate: { type: Number, default: 0},
         price: {  type: Number},
-        promotion : { type: mongoose.Schema.Types.ObjectId, ref: 'promotion_detail'}
+        promotion : { type: mongoose.Schema.Types.ObjectId, ref: 'promotion_detail',default:null}
 }]
 });
 

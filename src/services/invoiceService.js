@@ -53,8 +53,7 @@ const getAllInvoices = async () => {
                 productDonate = await Product.findOne({ _id: promotionDetail.product_donate }).select('name img').populate('unit_id', 'description').lean();
 
                 // Số lượng sản phẩm mà khách hàng cần mua thực tế (không tính số lượng được tặng)
-                const chargeableQuantity = Math.floor(item.quantity / (minQuantity + quantityDonate)) * minQuantity
-                    + (item.quantity % (minQuantity + quantityDonate));
+                const chargeableQuantity = item.quantity -item.quantity_donate;
 
                 // Tổng tiền phải trả
                 total = chargeableQuantity * item.price;
@@ -135,9 +134,7 @@ const getAllInvoicesRefund = async () => {
                 productDonate = await Product.findOne({ _id: promotionDetail.product_donate }).select('name img').populate('unit_id', 'description').lean();
 
                 // Số lượng sản phẩm mà khách hàng cần mua thực tế (không tính số lượng được tặng)
-                const chargeableQuantity = Math.floor(item.quantity / (minQuantity + quantityDonate)) * minQuantity
-                    + (item.quantity % (minQuantity + quantityDonate));
-
+                const chargeableQuantity = item.quantity -item.quantity_donate;
                 // Tổng tiền phải trả
                 total = chargeableQuantity * item.price;
 
