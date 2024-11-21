@@ -171,6 +171,7 @@ async function payCart(
   paymentMethod,
   paymentInfo,
   paymentAmount,
+  promotionOnInvoice,
   discountPayment,
   totalPayment
 ) {
@@ -203,30 +204,24 @@ async function payCart(
     const invoiceSaleDetails = [];
 
     for (const product of products) {
-      // Lấy thông tin khuyến mãi cho từng sản phẩm
-      const promotions = await promotionService.getPromotionByProductId(
-        product.product_id._id,
-        product.unit._id
-      ); // Thay đổi để lấy theo ID sản phẩm
-     
       const invoiceSaleDetail = {
         product: product.product_id._id, // ID sản phẩm
         quantity: product.quantity, // Số lượng
         unit_id: product.unit._id,
-        quantity_donate:product.promotion ? product.quantityDonate:0,
+        quantity_donate:product.quantity_donate, // Số lượng
         price: product.price.price, // Giá sản phẩm
-        promotion: promotions.length > 0 ? promotions[0]._id : null,
+        promotion: product.promotions ? product.promotions: null, // ID khuyến mãi nếu có
       };
 
+      // Push the detail into the invoice sale details array
       invoiceSaleDetails.push(invoiceSaleDetail);
     }
 
-    // Lưu thông tin hóa đơn bán hàng chi tiết
     const newInvoiceSaleDetail = new InvoiceSaleDetail({
       invoiceSaleHeader_id: invoiceSaleHeader._id,
+      promotionOnInvoice: promotionOnInvoice,
       products: invoiceSaleDetails,
     });
-
     await newInvoiceSaleDetail.save({ session });
 
     for (const item of products) {

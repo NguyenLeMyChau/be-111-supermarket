@@ -29,14 +29,12 @@ async function payCartController(req, res) {
             products,
             paymentMethod,
             paymentInfo,
-
             paymentAmount,promotionOnInvoice,discountPayment,
             totalPayment } = req.body;
         const cart = await payCart(customerId,
             products,
             paymentMethod,
             paymentInfo,
-
             paymentAmount,promotionOnInvoice,discountPayment,
             totalPayment);
         res.status(200).json(cart);
