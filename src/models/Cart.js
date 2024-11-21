@@ -11,7 +11,7 @@ const cartSchema = new mongoose.Schema({
             quantity: { type: Number, required: true, default: 1 },
             price: { type: mongoose.Schema.Types.ObjectId, ref: 'productPrice_detail' },
             total: { type: Number, required: true, default: 1 },
-            promotions : { type: mongoose.Schema.Types.ObjectId, ref: 'promotion_detail',default : null},
+            promotions :{ type: mongoose.Schema.Types.ObjectId, ref: 'promotion_detail',default:null},
             quantity_donate:{ type: Number, default:0}
         }
     ]
