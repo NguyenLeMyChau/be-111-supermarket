@@ -227,11 +227,10 @@ async function payCart(
     for (const item of products) {
       let salesQuantity = item.quantity; // Mặc định toàn bộ là số lượng bán
       let promoQuantity = 0; // Khởi tạo số lượng khuyến mãi ban đầu là 0
-    console.log(item.promotion)
       // Nếu sản phẩm có khuyến mãi
-      if (item.promotion && item.promotion.promotionLine_id.type === "quantity") {
+      if (item.promotions && item.promotions.promotionLine_id.type === "quantity") {
         // Tính số lượng khuyến mãi
-        promoQuantity = item.promotion.quantity_donate || 0;
+        promoQuantity = item.promotions.quantity_donate || 0;
     
         // Giảm số lượng bán tương ứng với số lượng khuyến mãi (nếu cần)
         salesQuantity -= promoQuantity;
@@ -250,7 +249,7 @@ async function payCart(
       // Nếu có số lượng khuyến mãi, tạo TransactionInventory cho khuyến mãi
       if (promoQuantity > 0) {
         const promoTransaction = new TransactionInventory({
-          product_id: item.promotion.product_donate || item._id, // Sản phẩm khuyến mãi (mặc định là sản phẩm gốc)
+          product_id: item.promotions.product_donate || item._id, // Sản phẩm khuyến mãi (mặc định là sản phẩm gốc)
           unit_id: item.unit_id_donate || item.unit._id, // Đơn vị sản phẩm khuyến mãi
           quantity: promoQuantity,
           type: "Khuyến mãi",
