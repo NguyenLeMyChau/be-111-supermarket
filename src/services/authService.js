@@ -42,7 +42,18 @@ async function registerAccount(accountData) {
         const savedAccount = await newAccount.save({ session });
 
         if (savedAccount.role === 'customer') {
+            const now = new Date();
+            // Lấy các chi tiết năm, tháng, ngày, giờ, phút, giây và mili giây
+            const year = now.getFullYear(); // Năm
+            const month = (now.getMonth() + 1).toString().padStart(2, '0'); // Tháng (0-11, nên +1)
+            const day = now.getDate().toString().padStart(2, '0'); // Ngày
+            const hours = now.getHours().toString().padStart(2, '0'); // Giờ
+            const minutes = now.getMinutes().toString().padStart(2, '0'); // Phút
+            const seconds = now.getSeconds().toString().padStart(2, '0'); // Giây     
+            const customerCode = `KH${year}${month}${day}${hours}${minutes}${seconds}`;
+
             const newCustomer = new Customer({
+                customer_id: customerCode,
                 name,
                 address: address || '',
                 phone,
@@ -148,7 +159,7 @@ async function loginAccount({ phone, password }) {
                 email: user.email,
                 gender: user.gender,
                 loyaltyPoints: user.loyaltyPoints,
-                employee_id:user.employee_id,
+                employee_id: user.employee_id,
                 _id: user._id
             },
         };

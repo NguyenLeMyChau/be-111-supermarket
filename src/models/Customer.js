@@ -16,7 +16,8 @@ const customerSchema = new mongoose.Schema({
     gender: { type: Boolean, trim: true }, // False: Nam, True: Nữ
     loyaltyPoints: { type: Number, default: 0 },
     barcode: { type: String, required: true, unique: true, trim: true },
-    account_id: { type: mongoose.Schema.Types.ObjectId, ref: 'account' }
+    account_id: { type: mongoose.Schema.Types.ObjectId, ref: 'account' },
+    customer_id: { type: String, required: true, unique: true, trim: true },
 });
 
 customerSchema.plugin(AutoIncrement, { inc_field: 'customer_index' });
