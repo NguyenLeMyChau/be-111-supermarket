@@ -12,49 +12,34 @@ const config = {
   endpoint: "https://sb-openapi.zalopay.vn/v2/create",
   endpointCheck: "https://sb-openapi.zalopay.vn/v2/query",
 };
-
-router.post("/payment", async (req, res) => {
-  const { amount } = req.body;
-  const embed_data = {
-    redirecturl: `${process.env.CLIENT_URL}/order`,
-    // redirecturl: process.env.URL_EXPO,
-  };
-
+const createOrder = (amount, embed_data, transID) => {
   const items = [{}];
-  const transID = Math.floor(Math.random() * 1000000);
-  const order = {
+  return {
     app_id: config.app_id,
-    app_trans_id: `${moment().format("YYMMDD")}_${transID}`, // translation missing: vi.docs.shared.sample_code.comments.app_trans_id
+    app_trans_id: `${moment().format("YYMMDD")}_${transID}`,
     app_user: "user123",
-    app_time: Date.now(), // miliseconds
+    app_time: Date.now(),
     item: JSON.stringify(items),
     embed_data: JSON.stringify(embed_data),
     amount: amount || 10000,
-    description: `TD Cinemas - Thanh toán đơn hàng #${transID}`,
+    description: `Thanh toán hóa đơn CapySmart #${transID}`,
     bank_code: "zalopayapp",
-    callback_url: `${process.env.URL_CALLBACK}/api/callback`,
+    callback_url: `${process.env.URL_CALLBACK}/api/payment/callback`,
+  };
+};
+router.post("/payment", async (req, res) => {
+  const { amount } = req.body;
+  const transID = Math.floor(Math.random() * 1000000);
+  const embed_data = {
+    redirecturl: `${process.env.CLIENT_URL}/frame-staff/payment`, // Redirect về trang web
   };
 
-  // appid|app_trans_id|appuser|amount|apptime|embeddata|item
-  const data =
-    config.app_id +
-    "|" +
-    order.app_trans_id +
-    "|" +
-    order.app_user +
-    "|" +
-    order.amount +
-    "|" +
-    order.app_time +
-    "|" +
-    order.embed_data +
-    "|" +
-    order.item;
+  const order = createOrder(amount, embed_data, transID);
+  const data = `${config.app_id}|${order.app_trans_id}|${order.app_user}|${order.amount}|${order.app_time}|${order.embed_data}|${order.item}`;
   order.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
 
   try {
     const result = await axios.post(config.endpoint, null, { params: order });
-    console.log("-------------------Success-----------------");
     return res.status(200).json(result.data);
   } catch (error) {
     return res.status(500).json({
@@ -63,6 +48,78 @@ router.post("/payment", async (req, res) => {
     });
   }
 });
+router.post("/paymentapp", async (req, res) => {
+  const { amount } = req.body;
+  const transID = Math.floor(Math.random() * 1000000);
+  const embed_data = {
+    redirecturl: `${process.env.CLIENT_URL_APP}`, // Redirect về app
+  };
+
+  const order = createOrder(amount, embed_data, transID);
+  const data = `${config.app_id}|${order.app_trans_id}|${order.app_user}|${order.amount}|${order.app_time}|${order.embed_data}|${order.item}`;
+  order.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
+
+  try {
+    const result = await axios.post(config.endpoint, null, { params: order });
+    // Trả về URL thanh toán cho app
+    return res.status(200).json({ paymentUrl: result.data });
+  } catch (error) {
+    return res.status(500).json({
+      statusCode: 500,
+      message: "Internal Server Error",
+    });
+  }
+});
+// router.post("/payment", async (req, res) => {
+//   const { amount } = req.body;
+//   const embed_data = {
+//     redirecturl: `${process.env.CLIENT_URL}/order`,
+//     // redirecturl: process.env.URL_EXPO,
+//   };
+
+//   const items = [{}];
+//   const transID = Math.floor(Math.random() * 1000000);
+//   const order = {
+//     app_id: config.app_id,
+//     app_trans_id: `${moment().format("YYMMDD")}_${transID}`, // translation missing: vi.docs.shared.sample_code.comments.app_trans_id
+//     app_user: "user123",
+//     app_time: Date.now(), // miliseconds
+//     item: JSON.stringify(items),
+//     embed_data: JSON.stringify(embed_data),
+//     amount: amount || 10000,
+//     description: `TD Cinemas - Thanh toán đơn hàng #${transID}`,
+//     bank_code: "zalopayapp",
+//     callback_url: `${process.env.URL_CALLBACK}/api/callback`,
+//   };
+
+//   // appid|app_trans_id|appuser|amount|apptime|embeddata|item
+//   const data =
+//     config.app_id +
+//     "|" +
+//     order.app_trans_id +
+//     "|" +
+//     order.app_user +
+//     "|" +
+//     order.amount +
+//     "|" +
+//     order.app_time +
+//     "|" +
+//     order.embed_data +
+//     "|" +
+//     order.item;
+//   order.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
+
+//   try {
+//     const result = await axios.post(config.endpoint, null, { params: order });
+//     console.log("-------------------Success-----------------");
+//     return res.status(200).json(result.data);
+//   } catch (error) {
+//     return res.status(500).json({
+//       statusCode: 500,
+//       message: "Internal Server Error",
+//     });
+//   }
+// });
 
 router.post("/callback", async (req, res) => {
   let result = {};
