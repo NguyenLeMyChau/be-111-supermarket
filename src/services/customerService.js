@@ -210,7 +210,7 @@ async function payCart(
         unit_id: product.unit._id,
         quantity_donate:product.quantity_donate, // Số lượng
         price: product.price.price, // Giá sản phẩm
-        promotion: product.promotions ? product.promotions?.id: null, // ID khuyến mãi nếu có
+        promotion: product.promotions ? product.promotions?._id: null, // ID khuyến mãi nếu có
       };
 
       // Push the detail into the invoice sale details array
