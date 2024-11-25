@@ -58,7 +58,6 @@ async function getCartById(accountId) {
 async function addProductToCart(accountId, productId, unitId, quantity, total,promotions) {
   try {
     // Tìm giỏ hàng của người dùng
-    console.log(promotions?._id)
     let product = await Product.findById(productId);
 
     let cart = await Cart.findOne({ account_id: accountId });
@@ -118,9 +117,6 @@ async function updateCart(accountId, productList) {
     if (!cart) {
       cart = new Cart({ account_id: accountId, products: [] });
     }
-
-    console.log("222", productList);
-    console.log(cart);
     // Duyệt qua danh sách sản phẩm từ đầu vào
     productList.forEach((product) => {
       // Tìm sản phẩm trong giỏ hàng hiện tại
@@ -131,7 +127,7 @@ async function updateCart(accountId, productList) {
       );
 
       if (existingProduct) {
-        console.log("111", existingProduct);
+       
         existingProduct.quantity = product.quantity;
         existingProduct.total = product.total;
         existingProduct.quantity_donate=product.quantity_donate;
@@ -294,7 +290,7 @@ async function payCart(
     await session.commitTransaction();
     session.endSession();
 
-    return { success: true, message: "Payment successful" };
+    return { success: true, message: "Payment successful" , invoice:invoiceSaleHeader?.invoiceCode};
   } catch (error) {
     // Rollback transaction
     await session.abortTransaction();
@@ -365,7 +361,7 @@ async function payCartWeb(
     for (const item of products) {
         let salesQuantity = item.quantity; // Mặc định toàn bộ là số lượng bán
         let promoQuantity = 0; // Khởi tạo số lượng khuyến mãi ban đầu là 0
-      console.log(item.promotion)
+
         // Nếu sản phẩm có khuyến mãi
         if (item.promotion && item.promotion.promotionLine_id.type === "quantity") {
           // Tính số lượng khuyến mãi
@@ -430,6 +426,7 @@ async function payCartWeb(
       success: true,
       message: "Thanh toán thành công",
       data: invoiceSaleHeader,
+      invoice:invoiceSaleHeader?.invoiceCode,
     };
   } catch (error) {
     await session.abortTransaction();

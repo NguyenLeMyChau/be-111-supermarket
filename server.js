@@ -39,6 +39,7 @@ const priceRoutes = require('./src/routes/priceRoutes');
 const invoiceRoutes = require('./src/routes/invoiceRoutes');
 const zalopay = require('./src/payment/zalopay/ZaloPay');
 const payment = require('./src/routes/paymentWebRoute');
+const handlerSocket = require('./socket');
 
 // ROUTES Manager
 app.use('/api/auth', authRoutes);
@@ -71,9 +72,18 @@ app.get('/dashboard', authMiddleware(['manager', 'staff']), (req, res) => {
   res.json({ message: `Welcome ${req.account.role}!` });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+const server = app.listen(PORT, () => {
+  // Khởi tạo server và lắng nghe trên PORT được xác định
+  console.log("Server Started in", PORT);
 });
+
+const socketIo = require("socket.io")(server, {
+  cors: {
+    origin: "*",
+  },
+});
+
+handlerSocket(socketIo);
 
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Hello, this is a test API!' });
