@@ -40,7 +40,11 @@ router.post("/payment", async (req, res) => {
 
   try {
     const result = await axios.post(config.endpoint, null, { params: order });
-    return res.status(200).json(result.data);
+    return res.status(200).json({ 
+      data: result.data, 
+      app_trans_id: order.app_trans_id 
+    });
+    
   } catch (error) {
     return res.status(500).json({
       statusCode: 500,
@@ -52,7 +56,7 @@ router.post("/paymentapp", async (req, res) => {
   const { amount } = req.body;
   const transID = Math.floor(Math.random() * 1000000);
   const embed_data = {
-    redirecturl: `${process.env.CLIENT_URL_APP}`, // Redirect về app
+    redirecturl: `${process.env.CLIENT_URL_APP}/ViewPayZalo`, // Redirect về app
   };
 
   const order = createOrder(amount, embed_data, transID);
@@ -62,7 +66,7 @@ router.post("/paymentapp", async (req, res) => {
   try {
     const result = await axios.post(config.endpoint, null, { params: order });
     // Trả về URL thanh toán cho app
-    return res.status(200).json({ paymentUrl: result.data });
+    return res.status(200).json({ paymentUrl: result.data,app_trans_id: order.app_trans_id  });
   } catch (error) {
     return res.status(500).json({
       statusCode: 500,

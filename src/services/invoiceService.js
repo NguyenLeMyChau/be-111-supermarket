@@ -260,9 +260,11 @@ const updateStatusOrder = async (invoice_id, status,employee_id) => {
     }
 };
 
+
 module.exports = {
     getAllInvoices,
     updateStatusOrder,
     getAllInvoicesRefund,
-    getInvoiceByInvoiceCode
+    getInvoiceByInvoiceCode,
+    
 };
