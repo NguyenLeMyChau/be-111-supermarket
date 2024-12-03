@@ -291,9 +291,6 @@ const updateProductPrice = async (priceId, updateData) => {
 };
 
 
-
-
-
 const addProductPriceDetail = async (priceDetailData) => {
   const { productPriceHeader_id, item_code, unit_id, price } = priceDetailData;
 
@@ -417,29 +414,61 @@ const deleteProductPriceHeader = async (headerId) => {
 };
 
 
+// const deleteProductPriceDetail = async (detailId) => {
+//   try {
+//     // Find the ProductPriceDetail by id
+//     const detail = await ProductPriceDetail.findById(detailId);
+
+//     // If the detail does not exist, return a message
+//     if (!detail) {
+//       return { success: false, message: 'Không tìm thấy giá cần xóa', allProductPrices: await getAllProductPrices() };
+//     }
+
+//     // Update the isStatus field to false instead of deleting the document
+//     detail.isActive = false;
+//     await detail.save();  // Save the updated document
+
+//     // Fetch the updated list of product prices
+//     const allProductPrices = await getAllProductPrices();
+
+//     return { success: true, message: 'Xóa thành công', allProductPrices };
+//   } catch (error) {
+//     console.error(error);
+//     return { success: false, message: 'Xóa thất bại', allProductPrices: await getAllProductPrices() };
+//   }
+// };
 const deleteProductPriceDetail = async (detailId) => {
   try {
-    // Find the ProductPriceDetail by id
-    const detail = await ProductPriceDetail.findById(detailId);
+    // Xóa ProductPriceDetail theo ID
+    const detail = await ProductPriceDetail.findByIdAndDelete(detailId);
 
-    // If the detail does not exist, return a message
+    // Nếu không tìm thấy tài liệu, trả về thông báo
     if (!detail) {
-      return { success: false, message: 'Không tìm thấy giá cần xóa', allProductPrices: await getAllProductPrices() };
+      return { 
+        success: false, 
+        message: 'Không tìm thấy giá cần xóa', 
+        allProductPrices: await getAllProductPrices() 
+      };
     }
 
-    // Update the isStatus field to false instead of deleting the document
-    detail.isActive = false;
-    await detail.save();  // Save the updated document
-
-    // Fetch the updated list of product prices
+    // Lấy danh sách giá sản phẩm sau khi xóa
     const allProductPrices = await getAllProductPrices();
 
-    return { success: true, message: 'Xóa thành công', allProductPrices };
+    return { 
+      success: true, 
+      message: 'Xóa thành công', 
+      allProductPrices 
+    };
   } catch (error) {
     console.error(error);
-    return { success: false, message: 'Xóa thất bại', allProductPrices: await getAllProductPrices() };
+    return { 
+      success: false, 
+      message: 'Xóa thất bại', 
+      allProductPrices: await getAllProductPrices() 
+    };
   }
 };
+
 
 
 module.exports = {
