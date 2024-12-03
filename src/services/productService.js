@@ -641,13 +641,14 @@ async function getAllProductsWithPriceAndPromotionNoCategory() {
 
 async function getProductsByBarcodeInUnitConvert(barcode) {
   try {
+    const today = new Date(new Date().getTime() + 2 * 60 * 60 * 1000);
     // Tìm sản phẩm theo mã vạch
     const product = await Product.findOne({ 'unit_convert.barcode': barcode }).populate('unit_convert.unit');
 
     if (!product) {
       return { message: 'Không tìm thấy sản phẩm.' };
     }
-
+   
     // Tìm giá sản phẩm dựa trên item_code hoặc một trường phù hợp khác
     const productPriceDetails = await ProductPriceDetail.find({
       isActive: true,
@@ -658,7 +659,8 @@ async function getProductsByBarcodeInUnitConvert(barcode) {
       })
       .populate({
         path: 'productPriceHeader_id', // assuming the reference to productPriceHeader is 'productPriceHeader_id'
-        match: { status: 'active' , isActive:true }, // filter productPriceHeader by status 'active'
+        match: { status: 'active' , isActive:true ,startDate: { $lte: today },endDate: { $gte:today  }
+      },
       });
 
     // Lọc ra các ProductPriceDetail có productPriceHeader_id là active
