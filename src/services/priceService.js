@@ -261,7 +261,7 @@ const updateProductPrice = async (priceId, updateData) => {
         // Thêm thông báo trùng lặp vào messages
         console.log("dsadasdsa",updateData)
         console.log(duplicateItem[0].header)
-        messages.push(`Đã có sản phẩm trùng lặp với bảng giá khác đang hoạt động (ID: ${duplicateItem[0].header.description})`);
+        messages.push(`Sản phẩm (${duplicateItem[0].item_code}) trùng lặp với bảng giá khác đang hoạt động (ID: ${duplicateItem[0].header.description})`);
         return { updatedPrice: null, allProductPrices, messages };
       }
     }
