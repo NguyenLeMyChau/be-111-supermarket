@@ -224,9 +224,10 @@ const getPromotionByProductId = async (productId, unit_id) => {
   
       // Tìm chi tiết khuyến mãi cho product_id hoặc product_donate với unit_id
       const promotions = await PromotionDetail.find({
+
         $or: [
-          { product_id: productId, unit_id: unit_id },
-          { product_donate: productId, unit_id_donate: unit_id }
+          { product_id: productId, unit_id: unit_id ,isActive:true},
+          { product_donate: productId, unit_id_donate: unit_id,isActive:true }
         ]
       }).populate('unit_id')
       .populate('unit_id_donate')

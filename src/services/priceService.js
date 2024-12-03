@@ -186,7 +186,7 @@ const updateProductPrice = async (priceId, updateData) => {
   const enddate = new Date(new Date(updateData.endDate)); // Chuyển updateData.endDate về đối tượng Date nếu cần
   const startdate = new Date(new Date(updateData.startDate)); 
   const startDate = new Date(updateData.startDate);
-  updateData.endDate = new Date(startDate.setHours(23, 59, 59, 999));
+  // updateData.endDate = new Date(startDate.setHours(23, 59, 59, 999));
 
   console.log(enddate)
   try {
@@ -236,13 +236,13 @@ const updateProductPrice = async (priceId, updateData) => {
             $or: [
               {
                 $and: [
-                  { 'header.startDate': { $gte: today } }, // startDate của header hiện tại phải sau endDate của các header khác
+                   { 'header.startDate': { $gte: startdate } }, // startDate của header hiện tại phải sau endDate của các header khác
                   { 'header.startDate': { $lte: enddate} }  // endDate của header hiện tại phải sau endDate của các header khác
                 ]
               },
               {
                 $and: [
-                  { 'header.endDate': { $lte: today } }, // startDate của header hiện tại phải trước startDate của các header khác
+                   { 'header.endDate': { $lte: enddate } }, // startDate của header hiện tại phải trước startDate của các header khác
                   { 'header.endDate': { $gte:  startdate} }  // endDate của header hiện tại phải trước startDate của các header khác
                 ]
               }
@@ -253,13 +253,13 @@ const updateProductPrice = async (priceId, updateData) => {
           $limit: 1 // Giới hạn chỉ lấy 1 kết quả
         }
       ]);
-      
+      console.log(duplicateItem)
       if (duplicateItem.length > 0) {
         // Lấy danh sách tất cả giá sản phẩm sau khi cập nhật thành công
         const allProductPrices = await getAllProductPrices();
 
         // Thêm thông báo trùng lặp vào messages
-        console.log(updateData)
+        console.log("dsadasdsa",updateData)
         console.log(duplicateItem[0].header)
         messages.push(`Đã có sản phẩm trùng lặp với bảng giá khác đang hoạt động (ID: ${duplicateItem[0].header.description})`);
         return { updatedPrice: null, allProductPrices, messages };
