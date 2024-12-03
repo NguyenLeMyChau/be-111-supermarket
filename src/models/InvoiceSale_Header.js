@@ -26,7 +26,7 @@ const invoiceSaleHeaderSchema = new mongoose.Schema({
         type: String,
         required: true,
         default: 'Tại quầy',
-        enum: ['Tại quầy', 'Chờ xử lý', 'Chuẩn bị hàng', 'Đang giao hàng', 'Đã nhận hàng','Đã trả hàng']
+        enum: ['Tại quầy', 'Chờ xử lý', 'Chuẩn bị hàng', 'Đang giao hàng', 'Đã nhận hàng','Đã trả hàng', 'Yêu cầu hoàn trả']
     },
     isRefund: {type: 'boolean', default: false}
 }, { timestamps: true });
