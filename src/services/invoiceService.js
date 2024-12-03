@@ -53,7 +53,7 @@ const getAllInvoices = async () => {
                 productDonate = await Product.findOne({ _id: promotionDetail.product_donate }).select('name img').populate('unit_id', 'description').lean();
 
                 // Số lượng sản phẩm mà khách hàng cần mua thực tế (không tính số lượng được tặng)
-                const chargeableQuantity = item.quantity -item.quantity_donate;
+                const chargeableQuantity = item.quantity - item.quantity_donate;
 
                 // Tổng tiền phải trả
                 total = chargeableQuantity * item.price;
@@ -133,7 +133,7 @@ const getInvoiceByInvoiceCode = async (invoiceCode) => {
                 total = item.quantity * discountedPrice;
             }
         } else if (promotionLine && promotionLine.type === 'quantity') {
-           
+
             // Truy vấn thông tin sản phẩm mua và sản phẩm được tặng
             productBuy = await Product.findOne({ _id: promotionDetail.product_id }).select('name img').populate('unit_id', 'description').lean();
             productDonate = await Product.findOne({ _id: promotionDetail.product_donate }).select('name img').populate('unit_id', 'description').lean();
@@ -216,7 +216,7 @@ const getAllInvoicesRefund = async () => {
                 productDonate = await Product.findOne({ _id: promotionDetail.product_donate }).select('name img').populate('unit_id', 'description').lean();
 
                 // Số lượng sản phẩm mà khách hàng cần mua thực tế (không tính số lượng được tặng)
-                const chargeableQuantity = item.quantity -item.quantity_donate;
+                const chargeableQuantity = item.quantity - item.quantity_donate;
                 // Tổng tiền phải trả
                 total = chargeableQuantity * item.price;
 
@@ -251,11 +251,24 @@ const getAllInvoicesRefund = async () => {
     return invoices;
 };
 
-const updateStatusOrder = async (invoice_id, status,employee_id) => {
+const updateStatusOrder = async (invoice_id, status, employee_id, reason) => {
     const invoice = await InvoiceSaleHeader.findOne({ _id: invoice_id });
+
     if (invoice) {
-        if(employee_id && status=== "Chuẩn bị hàng") invoice.employee_id = employee_id;
+        // Gán employee_id nếu trạng thái là "Chuẩn bị hàng"
+        if (employee_id && status === "Chuẩn bị hàng") {
+            invoice.employee_id = employee_id;
+        }
+
+        // Cập nhật trạng thái
         invoice.status = status;
+
+        // Nếu trạng thái là "Yêu cầu hoàn trả", lưu thêm lý do (reason)
+        if (status === "Yêu cầu hoàn trả" && reason) {
+            invoice.returnReason = reason; // Đảm bảo trong model có trường 'returnReason'
+        }
+
+        // Lưu thay đổi
         await invoice.save();
     }
 };
@@ -266,5 +279,5 @@ module.exports = {
     updateStatusOrder,
     getAllInvoicesRefund,
     getInvoiceByInvoiceCode,
-    
+
 };

@@ -19,16 +19,17 @@ const invoiceSaleHeaderSchema = new mongoose.Schema({
     },
     paymentMethod: { type: String, required: true },
     discountPayment: { type: Number, required: true },
-    totalPayment:{ type: Number, required: true },
+    totalPayment: { type: Number, required: true },
     paymentAmount: { type: Number, required: true },
     invoiceCode: { type: String, unique: true },  // Mã hóa đơn tự động
     status: {
         type: String,
         required: true,
         default: 'Tại quầy',
-        enum: ['Tại quầy', 'Chờ xử lý', 'Chuẩn bị hàng', 'Đang giao hàng', 'Đã nhận hàng','Đã trả hàng', 'Yêu cầu hoàn trả']
+        enum: ['Tại quầy', 'Chờ xử lý', 'Chuẩn bị hàng', 'Đang giao hàng', 'Đã nhận hàng', 'Đã trả hàng', 'Yêu cầu hoàn trả']
     },
-    isRefund: {type: 'boolean', default: false}
+    isRefund: { type: 'boolean', default: false },
+    returnReason: { type: String },
 }, { timestamps: true });
 
 invoiceSaleHeaderSchema.plugin(AutoIncrement, { inc_field: 'invoiceSaleHeader_index' });
