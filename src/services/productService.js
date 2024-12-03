@@ -680,13 +680,15 @@ async function getProductsByBarcodeInUnitConvert(barcode) {
         barcode: product.unit_convert.find((unit) => unit.barcode === barcode).barcode,
         unit_id: product.unit_convert.find((unit) => unit.barcode === barcode).unit,
         img: product.img,
-        unit_converts: product.unit_convert.map(unit => ({
+        unit_converts: product.unit_convert
+        .filter(unit => priceMap[unit.unit._id.toString()]) // Lọc bỏ các unit_convert không có giá
+        .map(unit => ({
           unit: unit.unit,
           quantity: unit.quantity,
           barcode: unit.barcode,
           img: unit.img,
           checkBaseUnit: unit.checkBaseUnit,
-          price: priceMap[unit.unit._id.toString()] || null, // Lấy giá từ priceMap, nếu không có thì trả về null
+          price: priceMap[unit.unit._id.toString()], // Lấy giá từ priceMap
         })),
       };
     } else {
