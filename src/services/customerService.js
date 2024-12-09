@@ -55,7 +55,7 @@ async function getCartById(accountId) {
   }
 }
 
-async function addProductToCart(accountId, productId, unitId, quantity, total,promotions) {
+async function addProductToCart(accountId, productId, unitId, quantity, total, promotions) {
   try {
     // Tìm giỏ hàng của người dùng
     let product = await Product.findById(productId);
@@ -85,8 +85,8 @@ async function addProductToCart(accountId, productId, unitId, quantity, total,pr
       cart.products[productIndex].quantity += quantity;
       cart.products[productIndex].price = priceInfo._id;
       cart.products[productIndex].total = total;
-      if(promotions) cart.products[productIndex].promotions = promotions?._id;
-    
+      if (promotions) cart.products[productIndex].promotions = promotions?._id;
+
     } else {
       // Nếu sản phẩm chưa tồn tại, thêm sản phẩm mới vào giỏ hàng
       cart.products.push({
@@ -127,11 +127,11 @@ async function updateCart(accountId, productList) {
       );
 
       if (existingProduct) {
-       
+
         existingProduct.quantity = product.quantity;
         existingProduct.total = product.total;
-        existingProduct.quantity_donate=product.quantity_donate;
-        existingProduct.promotions=product.promotions;
+        existingProduct.quantity_donate = product.quantity_donate;
+        existingProduct.promotions = product.promotions;
       }
     });
 
@@ -190,8 +190,8 @@ async function payCart(
       paymentInfo: paymentInfo,
       paymentMethod: paymentMethod,
       paymentAmount: paymentAmount,
-      discountPayment:discountPayment,
-      totalPayment:totalPayment,
+      discountPayment: discountPayment,
+      totalPayment: totalPayment,
       status: "Chờ xử lý",
     });
     await invoiceSaleHeader.save({ session });
@@ -204,9 +204,9 @@ async function payCart(
         product: product.product_id._id, // ID sản phẩm
         quantity: product.quantity, // Số lượng
         unit_id: product.unit._id,
-        quantity_donate:product.quantity_donate, // Số lượng
+        quantity_donate: product.quantity_donate, // Số lượng
         price: product.price.price, // Giá sản phẩm
-        promotion: product.promotions ? product.promotions?._id: null, // ID khuyến mãi nếu có
+        promotion: product.promotions ? product.promotions?._id : null, // ID khuyến mãi nếu có
       };
 
       // Push the detail into the invoice sale details array
@@ -227,11 +227,11 @@ async function payCart(
       if (item.promotions && item.promotions.promotionLine_id.type === "quantity") {
         // Tính số lượng khuyến mãi
         promoQuantity = item.quantity_donate || 0;
-    
+
         // Giảm số lượng bán tương ứng với số lượng khuyến mãi (nếu cần)
         salesQuantity -= promoQuantity;
       }
-    
+
       // Tạo TransactionInventory cho số lượng bán
       const salesTransaction = new TransactionInventory({
         product_id: item.product_id._id,
@@ -241,7 +241,7 @@ async function payCart(
         order_customer_id: invoiceSaleHeader._id,
       });
       await salesTransaction.save({ session });
-    
+
       // Nếu có số lượng khuyến mãi, tạo TransactionInventory cho khuyến mãi
       if (promoQuantity > 0) {
         const promoTransaction = new TransactionInventory({
@@ -290,7 +290,7 @@ async function payCart(
     await session.commitTransaction();
     session.endSession();
 
-    return { success: true, message: "Payment successful" , invoice:invoiceSaleHeader?.invoiceCode};
+    return { success: true, message: "Payment successful", invoice: invoiceSaleHeader?.invoiceCode };
   } catch (error) {
     // Rollback transaction
     await session.abortTransaction();
@@ -320,8 +320,8 @@ async function payCartWeb(
       paymentInfo: paymentInfo,
       paymentMethod: paymentMethod,
       paymentAmount: paymentAmount,
-      discountPayment:discountPayment,
-      totalPayment:totalPayment
+      discountPayment: discountPayment,
+      totalPayment: totalPayment
     };
 
     if (employee) {
@@ -341,7 +341,7 @@ async function payCartWeb(
         product: product._id, // ID sản phẩm
         quantity: product.quantity, // Số lượng
         unit_id: product.unit._id,
-        quantity_donate:product.promotion ? product.quantityDonate:0, // Số lượng
+        quantity_donate: product.promotion ? product.quantityDonate : 0, // Số lượng
         price: product.price, // Giá sản phẩm
         promotion: product.promotion ? product.promotion._id : null, // ID khuyến mãi nếu có
         discountAmount: product.promotion ? product.discountAmount : 0,
@@ -359,41 +359,41 @@ async function payCartWeb(
     await newInvoiceSaleDetail.save({ session });
 
     for (const item of products) {
-        let salesQuantity = item.quantity; // Mặc định toàn bộ là số lượng bán
-        let promoQuantity = 0; // Khởi tạo số lượng khuyến mãi ban đầu là 0
+      let salesQuantity = item.quantity; // Mặc định toàn bộ là số lượng bán
+      let promoQuantity = 0; // Khởi tạo số lượng khuyến mãi ban đầu là 0
 
-        // Nếu sản phẩm có khuyến mãi
-        if (item.promotion && item.promotion.promotionLine_id.type === "quantity") {
-          // Tính số lượng khuyến mãi
-          promoQuantity = item.quantity_donate || 0;
-      
-          // Giảm số lượng bán tương ứng với số lượng khuyến mãi (nếu cần)
-          salesQuantity -= promoQuantity;
-        }
-      
-        // Tạo TransactionInventory cho số lượng bán
-        const salesTransaction = new TransactionInventory({
-          product_id: item._id,
-          unit_id: item.unit._id,
-          quantity: salesQuantity,
-          type: "Bán hàng",
+      // Nếu sản phẩm có khuyến mãi
+      if (item.promotion && item.promotion.promotionLine_id.type === "quantity") {
+        // Tính số lượng khuyến mãi
+        promoQuantity = item.quantity_donate || 0;
+
+        // Giảm số lượng bán tương ứng với số lượng khuyến mãi (nếu cần)
+        salesQuantity -= promoQuantity;
+      }
+
+      // Tạo TransactionInventory cho số lượng bán
+      const salesTransaction = new TransactionInventory({
+        product_id: item._id,
+        unit_id: item.unit._id,
+        quantity: salesQuantity,
+        type: "Bán hàng",
+        order_customer_id: invoiceSaleHeader._id,
+      });
+      await salesTransaction.save({ session });
+
+      // Nếu có số lượng khuyến mãi, tạo TransactionInventory cho khuyến mãi
+      if (promoQuantity > 0) {
+        const promoTransaction = new TransactionInventory({
+          product_id: item.promotion.product_donate || item._id, // Sản phẩm khuyến mãi (mặc định là sản phẩm gốc)
+          unit_id: item.unit_id_donate || item.unit._id, // Đơn vị sản phẩm khuyến mãi
+          quantity: promoQuantity,
+          type: "Khuyến mãi",
           order_customer_id: invoiceSaleHeader._id,
         });
-        await salesTransaction.save({ session });
-      
-        // Nếu có số lượng khuyến mãi, tạo TransactionInventory cho khuyến mãi
-        if (promoQuantity > 0) {
-          const promoTransaction = new TransactionInventory({
-            product_id: item.promotion.product_donate || item._id, // Sản phẩm khuyến mãi (mặc định là sản phẩm gốc)
-            unit_id: item.unit_id_donate || item.unit._id, // Đơn vị sản phẩm khuyến mãi
-            quantity: promoQuantity,
-            type: "Khuyến mãi",
-            order_customer_id: invoiceSaleHeader._id,
-          });
-          await promoTransaction.save({ session });
-        }
+        await promoTransaction.save({ session });
       }
-      
+    }
+
 
     for (const product of products) {
       const pro = await Product.findById(product._id).session(session);
@@ -426,7 +426,7 @@ async function payCartWeb(
       success: true,
       message: "Thanh toán thành công",
       data: invoiceSaleHeader,
-      invoice:invoiceSaleHeader?.invoiceCode,
+      invoice: invoiceSaleHeader?.invoiceCode,
     };
   } catch (error) {
     await session.abortTransaction();
@@ -658,12 +658,22 @@ const updateCustomerInfo = async (accountId, userData) => {
       throw new Error("Account not found");
     }
 
-    // Cập nhật thông tin người dùng, không bao gồm trường phone
-    const { phone, ...userDataToUpdate } = userData; // Loại bỏ phone ra khỏi userData
+    // Tạo đối tượng address từ các trường city, district, ward, street
+    const { phone, city, district, ward, street, ...userDataToUpdate } = userData;
+
+    // Cập nhật trường address với đối tượng { city, district, ward, street }
+    const address = { city, district, ward, street };
+
+    // Cập nhật thông tin người dùng, bao gồm address
     const userUpdated = await Customer.findOneAndUpdate(
       { account_id: accountId },
-      { $set: userDataToUpdate }, // Cập nhật thông tin khác
-      { new: true }
+      {
+        $set: {
+          ...userDataToUpdate, // Cập nhật các trường còn lại
+          address,             // Cập nhật trường address
+        },
+      },
+      { new: true } // Trả về bản ghi đã cập nhật
     );
 
     return userUpdated;
@@ -671,6 +681,7 @@ const updateCustomerInfo = async (accountId, userData) => {
     throw new Error("Error updating user: " + error.message);
   }
 };
+
 
 const getInvoicesByAccountId = async (accountId) => {
   try {
@@ -751,8 +762,8 @@ const getInvoicesByAccountId = async (accountId) => {
 
               // Số lượng sản phẩm mà khách hàng cần mua thực tế (không tính số lượng được tặng)
               const chargeableQuantity =
-               item.quantity -item.quantity_donate
-                
+                item.quantity - item.quantity_donate
+
               // Tổng tiền phải trả
               total = chargeableQuantity * item.price;
 
@@ -858,7 +869,7 @@ async function refundWeb(invoiceCode, employee, refundReason) {
       paymentMethod: invoiceRefund.invoice.paymentMethod,
       paymentAmount: invoiceRefund.invoice.paymentAmount,
       discountPayment: invoiceRefund.invoice.discountPayment,
-      totalPayment:invoiceRefund.invoice.totalPayment,
+      totalPayment: invoiceRefund.invoice.totalPayment,
       status: invoiceRefund.invoice.status,
       refundReason: refundReason,
     };
