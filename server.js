@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require("cors");
 const dotenv = require('dotenv');
+const http = require('http'); 
 const PORT = process.env.PORT || 5000;
 const bodyParser = require('body-parser')
 
@@ -71,11 +72,7 @@ app.get('/manager', authMiddleware(['manager']), (req, res) => {
 app.get('/dashboard', authMiddleware(['manager', 'staff']), (req, res) => {
   res.json({ message: `Welcome ${req.account.role}!` });
 });
-
-const server = app.listen(PORT, () => {
-  // Khởi tạo server và lắng nghe trên PORT được xác định
-  console.log("Server Started in", PORT);
-});
+const server = http.createServer(app);
 
 const socketIo = require("socket.io")(server, {
   cors: {
@@ -92,6 +89,10 @@ app.get('/api/test', (req, res) => {
 
 app.get('/', (req, res) => {
   res.json({ message: 'Hello, welcome to supermarket' });
+});
+
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
 
 module.exports = app;
