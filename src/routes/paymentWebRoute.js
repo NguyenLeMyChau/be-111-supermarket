@@ -35,9 +35,10 @@ router.post("/payment", async (req, res) => {
   };
 
   const order = createOrder(amount, embed_data, transID);
+  console.log(order)
   const data = `${config.app_id}|${order.app_trans_id}|${order.app_user}|${order.amount}|${order.app_time}|${order.embed_data}|${order.item}`;
   order.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
-
+console.log(order.mac)
   try {
     const result = await axios.post(config.endpoint, null, { params: order });
     return res.status(200).json({ 
