@@ -30,7 +30,6 @@ async function login(req, res) {
         // Trả về token và thông tin account
         res.status(200).json({ accessToken, refreshToken });
     } catch (error) {
-        console.error(`Error logging in: ${error.message}`);
         res.status(400).json({ message: error.message });
     }
 }

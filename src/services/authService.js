@@ -55,9 +55,9 @@ async function registerAccount(accountData) {
             const newCustomer = new Customer({
                 customer_id: customerCode,
                 name,
-                address: address || '',
+                address: address || {},
                 phone,
-                email: email || '',
+                email: email || null,
                 gender,
                 barcode: phone,
                 account_id: savedAccount._id
@@ -126,8 +126,11 @@ async function loginAccount({ phone, password }) {
 
         // Kiểm tra xem tài khoản có tồn tại không
         const account = await Account.findOne({ phone });
+        if (!account) {
+            throw new Error('Số điện thoại hoặc mật khẩu không chính xác'); // Đảm bảo ném lỗi nếu không tìm thấy tài khoản
+        }
         const validPassword = await bcrypt.compare(password, account.password);
-        if (!account || !validPassword) {
+        if (!validPassword) {
             throw new Error('Số điện thoại hoặc mật khẩu không chính xác');
         }
 
@@ -172,7 +175,8 @@ async function loginAccount({ phone, password }) {
         return { accessToken, refreshToken };
 
     } catch (err) {
-        throw new Error(`Error logging in: ${err.message}`);
+        console.log('Error logging in service: ', err);
+        throw new Error(`${err}`);
     }
 }
 
