@@ -57,7 +57,7 @@ router.post("/paymentapp", async (req, res) => {
   const { amount } = req.body;
   const transID = Math.floor(Math.random() * 1000000);
   const embed_data = {
-    redirecturl: `${process.env.CLIENT_URL_APP}/ViewPayZalo`, // Redirect về app
+   
   };
 
   const order = createOrder(amount, embed_data, transID);
