@@ -233,6 +233,7 @@ async function payCart(
       }
 
       // Tạo TransactionInventory cho số lượng bán
+      if (salesQuantity > 0) {
       const salesTransaction = new TransactionInventory({
         product_id: item.product_id._id,
         unit_id: item.unit._id,
@@ -241,7 +242,7 @@ async function payCart(
         order_customer_id: invoiceSaleHeader._id,
       });
       await salesTransaction.save({ session });
-
+    }
       // Nếu có số lượng khuyến mãi, tạo TransactionInventory cho khuyến mãi
       if (promoQuantity > 0) {
         const promoTransaction = new TransactionInventory({
@@ -359,19 +360,21 @@ async function payCartWeb(
     await newInvoiceSaleDetail.save({ session });
 
     for (const item of products) {
+      console.log(item)
       let salesQuantity = item.quantity; // Mặc định toàn bộ là số lượng bán
       let promoQuantity = 0; // Khởi tạo số lượng khuyến mãi ban đầu là 0
 
       // Nếu sản phẩm có khuyến mãi
       if (item.promotion && item.promotion.promotionLine_id.type === "quantity") {
         // Tính số lượng khuyến mãi
-        promoQuantity = item.quantity_donate || 0;
+        promoQuantity = item.quantityDonate;
 
         // Giảm số lượng bán tương ứng với số lượng khuyến mãi (nếu cần)
         salesQuantity -= promoQuantity;
       }
 
       // Tạo TransactionInventory cho số lượng bán
+      if (salesQuantity > 0) {
       const salesTransaction = new TransactionInventory({
         product_id: item._id,
         unit_id: item.unit._id,
@@ -380,7 +383,7 @@ async function payCartWeb(
         order_customer_id: invoiceSaleHeader._id,
       });
       await salesTransaction.save({ session });
-
+    }
       // Nếu có số lượng khuyến mãi, tạo TransactionInventory cho khuyến mãi
       if (promoQuantity > 0) {
         const promoTransaction = new TransactionInventory({
