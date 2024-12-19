@@ -28,8 +28,9 @@ const invoiceSaleHeaderSchema = new mongoose.Schema({
         default: 'Tại quầy',
         enum: ['Tại quầy', 'Chờ xử lý', 'Chuẩn bị hàng', 'Đang giao hàng', 'Đã nhận hàng', 'Đã trả hàng', 'Yêu cầu hoàn trả']
     },
-    isRefund: { type: 'boolean', default: false },
+    isRefund: { type: Boolean, default: false },
     returnReason: { type: String },
+    paymentCustomer:{type : Number, required: false,default:null},
 }, { timestamps: true });
 
 invoiceSaleHeaderSchema.plugin(AutoIncrement, { inc_field: 'invoiceSaleHeader_index' });

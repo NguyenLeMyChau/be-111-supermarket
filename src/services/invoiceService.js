@@ -13,7 +13,8 @@ const getAllInvoices = async () => {
 
     const invoices = await Promise.all(invoicesHeader.map(async (header) => {
         const customer = await Customer.findOne({ account_id: header.customer_id }).select('name');
-        const detail = await InvoiceSaleDetail.findOne({ invoiceSaleHeader_id: header._id }).lean();
+        const detail = await InvoiceSaleDetail.findOne({ invoiceSaleHeader_id: header._id }).populate({ path: "promotionOnInvoice"}).lean();
+        console.log(detail);
 
         // Duyệt qua products bên trong detail
         const productsWithInfo = await Promise.all(detail.products.map(async (item) => {
@@ -97,7 +98,8 @@ const getInvoiceByInvoiceCode = async (invoiceCode) => {
     }
 
     const customer = await Customer.findOne({ account_id: invoiceHeader.customer_id }).select('name');
-    const detail = await InvoiceSaleDetail.findOne({ invoiceSaleHeader_id: invoiceHeader._id }).lean();
+
+    const detail = await InvoiceSaleDetail.findOne({ invoiceSaleHeader_id: invoiceHeader._id }).populate({ path: "promotionOnInvoice"}).lean();
 
     if (!detail) {
         throw new Error('Invoice detail not found');

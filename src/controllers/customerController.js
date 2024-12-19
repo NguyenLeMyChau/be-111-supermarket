@@ -50,7 +50,7 @@ async function payCartWebController(req, res) {
             paymentMethod,
             paymentInfo,
             paymentAmount,promotionOnInvoice , discountPayment,
-            totalPayment} = req.body;
+            totalPayment,paymentCustomer} = req.body;
         const cart = await payCartWeb(employee,
             customerId,
             products,
@@ -58,7 +58,7 @@ async function payCartWebController(req, res) {
             paymentInfo,
             paymentAmount,
             promotionOnInvoice,discountPayment,
-            totalPayment);
+            totalPayment,paymentCustomer);
         res.status(200).json(cart);
     } catch (error) {
         console.error(`Error pay cart: ${error.message}`);

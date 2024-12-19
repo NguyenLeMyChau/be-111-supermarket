@@ -310,7 +310,8 @@ async function payCartWeb(
   paymentAmount,
   promotionOnInvoice,
   discountPayment,
-  totalPayment
+  totalPayment,
+  paymentCustomer
 ) {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -324,7 +325,9 @@ async function payCartWeb(
       discountPayment: discountPayment,
       totalPayment: totalPayment
     };
-
+    if(paymentCustomer){
+      invoiceSaleHeaderData.paymentCustomer = paymentCustomer;
+    }
     if (employee) {
       invoiceSaleHeaderData.employee_id = employee._id;
     }
